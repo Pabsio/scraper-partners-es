@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ofertas de Viaje · Dashboard</title>
+  <style>
+    /* ── Reset & tokens ─────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #f4f6fa;
+      --surface:   #ffffff;
+      --border:    #e2e8f0;
+      --text:      #1a202c;
+      --muted:     #64748b;
+      --primary:   #2563eb;
+      --primary-l: #dbeafe;
+      --green:     #16a34a;
+      --green-l:   #dcfce7;
+      --red:       #dc2626;
+      --red-l:     #fee2e2;
+      --orange:    #ea580c;
+      --yellow:    #ca8a04;
+      --radius:    10px;
+      --shadow:    0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.10);
+    }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    button { cursor: pointer; font: inherit; border: none; }
+
+    /* ── Layout ─────────────────────────────────────── */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: var(--shadow);
+    }
+    .topbar h1 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .topbar h1 span { font-size: 22px; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .main { display: flex; height: calc(100vh - 56px); overflow: hidden; }
+
+    /* ── Sidebar filtros ────────────────────────────── */
+    .sidebar {
+      width: 260px; min-width: 260px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .sidebar h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 4px; }
+    .filter-group { display: flex; flex-direction: column; gap: 6px; }
+    .filter-group label { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .filter-group select,
+    .filter-group input[type=text],
+    .filter-group input[type=number] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      font: inherit;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .filter-group select:focus,
+    .filter-group input:focus { border-color: var(--primary); }
+    .price-range { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .chip-group { display: flex; flex-wrap: wrap; gap: 5px; }
+    .chip {
+      padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+      cursor: pointer; transition: all .15s;
+    }
+    .chip:hover { border-color: var(--primary); color: var(--primary); }
+    .chip.active { background: var(--primary-l); border-color: var(--primary); color: var(--primary); }
+    .chip.bajada { background: var(--green-l); border-color: var(--green); color: var(--green); }
+    .sidebar-footer { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
+    .btn-reset {
+      width: 100%; padding: 8px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--muted); font-size: 13px;
+      transition: all .15s;
+    }
+    .btn-reset:hover { background: var(--red-l); border-color: var(--red); color: var(--red); }
+
+    /* ── Content area ───────────────────────────────── */
+    .content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── Stats bar ──────────────────────────────────── */
+    .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+    .stat-card .label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+    .stat-card .value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+    .stat-card.green .value { color: var(--green); }
+    .stat-card.blue .value  { color: var(--primary); }
+
+    /* ── Toolbar ────────────────────────────────────── */
+    .toolbar {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 14px;
+      box-shadow: var(--shadow);
+    }
+    .toolbar .search-wrap { flex: 1; position: relative; }
+    .toolbar .search-wrap input {
+      width: 100%; padding: 8px 12px 8px 36px;
+      border: 1px solid var(--border); border-radius: 6px;
+      font: inherit; font-size: 13px; background: var(--bg);
+      outline: none; transition: border-color .15s;
+    }
+    .toolbar .search-wrap input:focus { border-color: var(--primary); }
+    .toolbar .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 16px; pointer-events: none; }
+    .toolbar label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .toolbar select {
+      padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+      font: inherit; font-size: 13px; background: var(--bg); outline: none;
+    }
+    .result-count { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+    /* ── Offers grid ────────────────────────────────── */
+    .offers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .offer-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      box-shadow: var(--shadow); transition: box-shadow .2s, transform .2s;
+      display: flex; flex-direction: column;
+    }
+    .offer-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .offer-card.inactiva { opacity: 0.55; }
+
+    .card-img {
+      width: 100%; height: 150px; object-fit: cover; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 32px;
+    }
+    .card-img img { width: 100%; height: 100%; object-fit: cover; }
+
+    .card-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .card-fuente {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+      padding: 2px 7px; border-radius: 4px; align-self: flex-start;
+    }
+    .fuente-traventia     { background: #fef3c7; color: #92400e; }
+    .fuente-buscounchollo { background: #dcfce7; color: #166534; }
+    .fuente-weekendesk    { background: #dbeafe; color: #1e40af; }
+
+    .card-title { font-size: 13px; font-weight: 600; line-height: 1.35; }
+    .card-dest  { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+    .card-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+    .badge {
+      font-size: 11px; padding: 2px 7px; border-radius: 4px;
+      background: var(--bg); color: var(--muted); border: 1px solid var(--border);
+    }
+    .badge.pension  { background: #faf5ff; color: #7c3aed; border-color: #e9d5ff; }
+    .badge.tipo     { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+    .badge.clima    { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+    .badge.estrella { background: #fefce8; color: #a16207; border-color: #fef08a; }
+
+    .card-extras { font-size: 11px; color: var(--muted); }
+
+    .card-footer {
+      padding: 10px 14px 12px;
+      display: flex; align-items: flex-end; justify-content: space-between;
+      border-top: 1px solid var(--border); margin-top: auto;
+    }
+    .price-block {}
+    .price-main { font-size: 22px; font-weight: 800; color: var(--text); }
+    .price-label { font-size: 11px; color: var(--muted); }
+    .price-old { font-size: 12px; text-decoration: line-through; color: var(--muted); }
+    .price-badge-down {
+      font-size: 11px; font-weight: 700; padding: 3px 8px;
+      background: var(--green-l); color: var(--green); border-radius: 20px;
+    }
+    .price-badge-up {
+      font-size: 11px; font-weight: 700; padding: 3px 8px;
+      background: var(--red-l); color: var(--red); border-radius: 20px;
+    }
+    .card-link {
+      font-size: 12px; font-weight: 600; padding: 6px 12px;
+      background: var(--primary); color: white; border-radius: 6px;
+      transition: background .15s; white-space: nowrap;
+    }
+    .card-link:hover { background: #1d4ed8; text-decoration: none; }
+
+    .gemini-tag {
+      font-size: 10px; padding: 2px 6px; border-radius: 4px;
+      background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe;
+    }
+
+    /* ── Pagination ─────────────────────────────────── */
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .pagination button {
+      padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--surface); font-size: 13px; color: var(--text);
+      transition: all .15s;
+    }
+    .pagination button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+    .pagination button.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .page-info { font-size: 13px; color: var(--muted); }
+
+    /* ── Empty state ────────────────────────────────── */
+    .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty p { font-size: 15px; }
+
+    /* ── Loading ────────────────────────────────────── */
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+    .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Source logos colors ────────────────────────── */
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+    .dot-traventia     { background: #f59e0b; }
+    .dot-buscounchollo { background: #16a34a; }
+    .dot-weekendesk    { background: #2563eb; }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <h1><span>✈️</span> Ofertas de Viaje</h1>
+  <div class="topbar-right">
+    <span id="last-update" style="font-size:12px;color:var(--muted)"></span>
+    <button onclick="loadAll()" style="padding:7px 14px;background:var(--primary);color:white;border-radius:6px;font-size:13px;font-weight:600;">
+      🔄 Actualizar
+    </button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <h2>Filtros</h2>
+
+    <!-- Búsqueda rápida -->
+    <div class="filter-group">
+      <label>Buscar</label>
+      <input type="text" id="f-search" placeholder="Mallorca, SPA, Todo incl…" oninput="debounceLoad()">
+    </div>
+
+    <!-- Estado -->
+    <div class="filter-group">
+      <label>Estado</label>
+      <div class="chip-group">
+        <span class="chip active" data-field="activa" data-val="1" onclick="toggleChip(this)">Activas</span>
+        <span class="chip" data-field="activa" data-val="0" onclick="toggleChip(this)">Archivadas</span>
+        <span class="chip" data-field="activa" data-val="all" onclick="toggleChip(this)">Todas</span>
+      </div>
+    </div>
+
+    <!-- Bajada de precio -->
+    <div class="filter-group">
+      <div class="chip-group">
+        <span class="chip bajada" id="chip-bajada" onclick="toggleBajada(this)">💚 Precio bajado</span>
+      </div>
+    </div>
+
+    <!-- Fuente -->
+    <div class="filter-group">
+      <label>Fuente</label>
+      <select id="f-fuente" onchange="loadOffers()">
+        <option value="">Todas</option>
+      </select>
+    </div>
+
+    <!-- País -->
+    <div class="filter-group">
+      <label>País</label>
+      <select id="f-pais" onchange="loadOffers()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+
+    <!-- Región -->
+    <div class="filter-group">
+      <label>Región / CCAA</label>
+      <select id="f-region" onchange="loadOffers()">
+        <option value="">Todas</option>
+      </select>
+    </div>
+
+    <!-- Tipo viaje -->
+    <div class="filter-group">
+      <label>Tipo de viaje</label>
+      <select id="f-tipo_viaje" onchange="loadOffers()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+
+    <!-- Tipo clima -->
+    <div class="filter-group">
+      <label>Entorno</label>
+      <select id="f-tipo_clima" onchange="loadOffers()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+
+    <!-- Pensión -->
+    <div class="filter-group">
+      <label>Régimen</label>
+      <select id="f-pension" onchange="loadOffers()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+
+    <!-- Estrellas -->
+    <div class="filter-group">
+      <label>Estrellas</label>
+      <select id="f-estrellas" onchange="loadOffers()">
+        <option value="">Todas</option>
+      </select>
+    </div>
+
+    <!-- Precio -->
+    <div class="filter-group">
+      <label>Precio €/persona</label>
+      <div class="price-range">
+        <input type="number" id="f-precio_min" placeholder="Mín" min="0" oninput="debounceLoad()">
+        <input type="number" id="f-precio_max" placeholder="Máx" min="0" oninput="debounceLoad()">
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="btn-reset" onclick="resetFilters()">✕ Limpiar filtros</button>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- Stats -->
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat-card blue"><div class="label">Activas</div><div class="value" id="st-activas">…</div></div>
+      <div class="stat-card"><div class="label">Histórico</div><div class="value" id="st-total">…</div></div>
+      <div class="stat-card green"><div class="label">Precio bajado</div><div class="value" id="st-bajadas">…</div></div>
+      <div class="stat-card"><div class="label">Precio medio</div><div class="value" id="st-precio">…</div></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="t-search" placeholder="Buscar destino, hotel, extras…" oninput="syncSearch(this)">
+      </div>
+      <label>Ordenar:</label>
+      <select id="f-orden" onchange="loadOffers()">
+        <option value="primera_vez">Más recientes</option>
+        <option value="ultima_vez">Última actualización</option>
+        <option value="precio_asc">Precio ↑</option>
+        <option value="precio_desc">Precio ↓</option>
+        <option value="bajada">Mayor bajada</option>
+      </select>
+      <span class="result-count" id="result-count"></span>
+    </div>
+
+    <!-- Grid ofertas -->
+    <div id="offers-container">
+      <div class="loading"><div class="spinner"></div><br>Cargando ofertas…</div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination"></div>
+
+  </main>
+</div>
+
+<script>
+  // ── Estado ──────────────────────────────────────────
+  let currentPage = 1;
+  let totalPages  = 1;
+  let debounceTimer = null;
+  let activaFilter = "1";
+  let bajadaFilter = false;
+
+  // ── Init ─────────────────────────────────────────────
+  window.addEventListener("DOMContentLoaded", () => {
+    loadStats();
+    loadFiltros();
+    loadOffers();
+  });
+
+  function loadAll() {
+    loadStats();
+    loadOffers();
+  }
+
+  // ── Stats ─────────────────────────────────────────────
+  async function loadStats() {
+    const r = await fetch("/api/stats").then(r => r.json());
+    document.getElementById("st-activas").textContent  = r.total_activas ?? "—";
+    document.getElementById("st-total").textContent    = r.total_historico ?? "—";
+    document.getElementById("st-bajadas").textContent  = r.bajadas_precio ?? "—";
+    document.getElementById("st-precio").textContent   = r.precio_medio ? r.precio_medio + "€" : "—";
+    document.getElementById("last-update").textContent = "Actualizado: " + new Date().toLocaleTimeString("es-ES");
+  }
+
+  // ── Filtros dropdown ──────────────────────────────────
+  async function loadFiltros() {
+    const data = await fetch("/api/filtros").then(r => r.json());
+    populateSelect("f-fuente",     data.fuentes);
+    populateSelect("f-pais",       data.paises);
+    populateSelect("f-region",     data.regiones);
+    populateSelect("f-tipo_viaje", data.tipos_viaje);
+    populateSelect("f-tipo_clima", data.tipos_clima);
+    populateSelect("f-pension",    data.pensiones);
+    populateSelect("f-estrellas",  data.estrellas);
+  }
+
+  function populateSelect(id, values) {
+    const sel = document.getElementById(id);
+    const cur = sel.value;
+    // Mantener primera opción "Todas"
+    while (sel.options.length > 1) sel.remove(1);
+    for (const v of values) {
+      const opt = new Option(v, v);
+      sel.add(opt);
+    }
+    if (cur) sel.value = cur;
+  }
+
+  // ── Chips estado ─────────────────────────────────────
+  function toggleChip(el) {
+    document.querySelectorAll("[data-field='activa']").forEach(c => c.classList.remove("active"));
+    el.classList.add("active");
+    activaFilter = el.dataset.val;
+    currentPage  = 1;
+    loadOffers();
+  }
+
+  function toggleBajada(el) {
+    bajadaFilter = !bajadaFilter;
+    el.classList.toggle("active", bajadaFilter);
+    currentPage = 1;
+    loadOffers();
+  }
+
+  // ── Sync búsqueda sidebar ↔ toolbar ──────────────────
+  function syncSearch(el) {
+    document.getElementById("f-search").value = el.value;
+    debounceLoad();
+  }
+
+  // ── Build params ──────────────────────────────────────
+  function buildParams() {
+    const p = new URLSearchParams();
+    const g = id => document.getElementById(id)?.value || "";
+
+    const search = g("f-search") || g("t-search");
+    if (search)        p.set("q", search);
+    if (g("f-fuente")) p.set("fuente", g("f-fuente"));
+    if (g("f-pais"))   p.set("pais", g("f-pais"));
+    if (g("f-region")) p.set("region", g("f-region"));
+    if (g("f-tipo_viaje")) p.set("tipo_viaje", g("f-tipo_viaje"));
+    if (g("f-tipo_clima")) p.set("tipo_clima", g("f-tipo_clima"));
+    if (g("f-pension"))    p.set("pension", g("f-pension"));
+    if (g("f-estrellas"))  p.set("estrellas", g("f-estrellas"));
+    if (g("f-precio_min")) p.set("precio_min", g("f-precio_min"));
+    if (g("f-precio_max")) p.set("precio_max", g("f-precio_max"));
+    if (g("f-orden"))      p.set("orden", g("f-orden"));
+    if (bajadaFilter)      p.set("bajada", "1");
+
+    p.set("activa",   activaFilter);
+    p.set("page",     currentPage);
+    p.set("per_page", 48);
+    return p;
+  }
+
+  // ── Load offers ───────────────────────────────────────
+  async function loadOffers() {
+    const container = document.getElementById("offers-container");
+    container.innerHTML = '<div class="loading"><div class="spinner"></div><br>Cargando…</div>';
+
+    const params = buildParams();
+    const data   = await fetch("/api/ofertas?" + params).then(r => r.json());
+
+    totalPages  = data.pages || 1;
+    document.getElementById("result-count").textContent =
+      data.total + " resultado" + (data.total === 1 ? "" : "s");
+
+    if (!data.items || data.items.length === 0) {
+      container.innerHTML = `
+        <div class="empty">
+          <div class="icon">🏖️</div>
+          <p>No se encontraron ofertas con estos filtros.</p>
+        </div>`;
+      renderPagination();
+      return;
+    }
+
+    const grid = document.createElement("div");
+    grid.className = "offers-grid";
+    for (const o of data.items) {
+      grid.appendChild(renderCard(o));
+    }
+    container.innerHTML = "";
+    container.appendChild(grid);
+    renderPagination();
+  }
+
+  // ── Render card ───────────────────────────────────────
+  function renderCard(o) {
+    const div = document.createElement("div");
+    div.className = "offer-card" + (o.activa ? "" : " inactiva");
+
+    // Imagen
+    const imgHtml = o.imagen_url
+      ? `<div class="card-img"><img src="${escHtml(o.imagen_url)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='✈️'"></div>`
+      : `<div class="card-img">✈️</div>`;
+
+    // Fuente badge
+    const fuente = o.fuente || "";
+    const fuenteClass = `fuente-${fuente}`;
+    const fuenteLabel = { traventia: "Traventia", buscounchollo: "BuscoUnChollo", weekendesk: "Weekendesk" }[fuente] || fuente;
+
+    // Precio
+    let priceHtml = "";
+    if (o.precio) {
+      priceHtml += `<div class="price-main">${o.precio.toFixed(0)}€</div>`;
+      priceHtml += `<div class="price-label">/ ${o.precio_por || "persona"}</div>`;
+      if (o.precio_anterior && o.bajada_pct > 0) {
+        priceHtml += `<div class="price-old">${o.precio_anterior.toFixed(0)}€</div>`;
+      }
+    } else {
+      priceHtml = `<div class="price-main" style="font-size:14px;color:var(--muted)">Consultar</div>`;
+    }
+
+    // Badge bajada/subida
+    let priceBadge = "";
+    if (o.bajada_pct > 0) {
+      priceBadge = `<span class="price-badge-down">↓ ${o.bajada_pct}%</span>`;
+    } else if (o.precio_anterior && o.precio > o.precio_anterior) {
+      priceBadge = `<span class="price-badge-up">↑ subió</span>`;
+    }
+
+    // Badges info
+    const badges = [
+      o.tipo_viaje ? `<span class="badge tipo">${escHtml(o.tipo_viaje)}</span>` : "",
+      o.tipo_clima ? `<span class="badge clima">${escHtml(o.tipo_clima)}</span>` : "",
+      o.pension && o.pension !== "Sin especificar" ? `<span class="badge pension">${escHtml(o.pension)}</span>` : "",
+      o.estrellas ? `<span class="badge estrella">${escHtml(o.estrellas)}</span>` : "",
+    ].filter(Boolean).join("");
+
+    // Gemini tags
+    let geminiHtml = "";
+    if (o.gemini_tags && o.gemini_tags.length > 0) {
+      geminiHtml = o.gemini_tags.slice(0, 3).map(t => `<span class="gemini-tag">✦ ${escHtml(t)}</span>`).join(" ");
+    }
+
+    // Extras (solo primeros 2)
+    let extrasHtml = "";
+    if (o.extras) {
+      const ex = o.extras.split(",").map(e => e.trim()).slice(0, 2);
+      extrasHtml = `<div class="card-extras">+ ${ex.join(" · ")}</div>`;
+    }
+
+    // Descripción Gemini
+    const resumen = o.gemini_resumen
+      ? `<div style="font-size:12px;color:var(--muted);font-style:italic">${escHtml(o.gemini_resumen)}</div>`
+      : "";
+
+    // Destino
+    const destParts = [o.destino, o.region].filter(Boolean);
+    const destLabel = destParts.length ? destParts.join(" · ") : (o.pais || "");
+
+    div.innerHTML = `
+      ${imgHtml}
+      <div class="card-body">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span class="card-fuente ${fuenteClass}">${fuenteLabel}</span>
+          ${o.duracion_noches ? `<span style="font-size:11px;color:var(--muted)">${o.duracion_noches}🌙</span>` : ""}
+        </div>
+        <div class="card-title">${escHtml(o.titulo || "Sin título")}</div>
+        ${destLabel ? `<div class="card-dest">📍 ${escHtml(destLabel)}</div>` : ""}
+        ${resumen}
+        <div class="card-badges">${badges}</div>
+        ${geminiHtml ? `<div class="chip-group">${geminiHtml}</div>` : ""}
+        ${extrasHtml}
+      </div>
+      <div class="card-footer">
+        <div class="price-block">
+          ${priceHtml}
+          ${priceBadge}
+        </div>
+        <a href="${escHtml(o.url)}" target="_blank" class="card-link">Ver oferta →</a>
+      </div>
+    `;
+    return div;
+  }
+
+  // ── Pagination ────────────────────────────────────────
+  function renderPagination() {
+    const el = document.getElementById("pagination");
+    if (totalPages <= 1) { el.innerHTML = ""; return; }
+
+    const pages = [];
+    pages.push(`<button onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? "disabled" : ""}>‹ Anterior</button>`);
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+        pages.push(`<button class="${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`);
+      } else if (i === currentPage - 3 || i === currentPage + 3) {
+        pages.push(`<span class="page-info">…</span>`);
+      }
+    }
+    pages.push(`<button onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? "disabled" : ""}>Siguiente ›</button>`);
+    el.innerHTML = pages.join("");
+  }
+
+  function goPage(p) {
+    if (p < 1 || p > totalPages) return;
+    currentPage = p;
+    loadOffers();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ── Utils ─────────────────────────────────────────────
+  function debounceLoad() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => { currentPage = 1; loadOffers(); }, 350);
+  }
+
+  function resetFilters() {
+    ["f-fuente","f-pais","f-region","f-tipo_viaje","f-tipo_clima","f-pension","f-estrellas","f-orden"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    ["f-search","t-search","f-precio_min","f-precio_max"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    document.querySelectorAll("[data-field='activa']").forEach(c => c.classList.remove("active"));
+    document.querySelector("[data-val='1']")?.classList.add("active");
+    activaFilter = "1";
+    bajadaFilter = false;
+    document.getElementById("chip-bajada").classList.remove("active");
+    currentPage = 1;
+    loadOffers();
+  }
+
+  function escHtml(str) {
+    return String(str ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+name: Oferta Scraper
+
+on:
+  schedule:
+    # 3 veces al día en días laborables (UTC → España = +1h invierno / +2h verano)
+    - cron: "0 7,11,16 * * 1-5"   # 09:00, 13:00, 18:00 hora España
+  workflow_dispatch:               # también se puede lanzar manualmente desde GitHub
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 1. Checkout del repo ────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # ── 2. Python ───────────────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # ── 3. Dependencias ─────────────────────────────────────────────────────
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests beautifulsoup4 playwright flask \
+                      google-generativeai lxml
+
+      # ── 4. Playwright chromium ──────────────────────────────────────────────
+      - name: Install Playwright browsers
+        run: playwright install --with-deps chromium
+
+      # ── 5. Scraping ─────────────────────────────────────────────────────────
+      - name: Run scraper
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python main.py
+        # Si quieres saltar Gemini en GitHub Actions:
+        # run: python main.py --no-gemini
+
+      # ── 6. Commit SQLite actualizado ────────────────────────────────────────
+      - name: Commit DB changes
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ofertas.db
+          git diff --staged --quiet || git commit -m "chore: scrape $(date +'%Y-%m-%d %H:%M')"
+          git push
