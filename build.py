@@ -1,26 +1,27 @@
 """
-build.py — Genera index.html estático con todos los datos embebidos en JSON.
-Se ejecuta después del scraper. El HTML resultante se sube a Netlify.
-
-Uso:
-    python3 build.py
-    → genera docs/index.html
+build.py — Genera docs/index.html estático para el board de partners
+(Traventia · BuscoUnChollo · Weekendesk)
+Brandbook HolidayPirates: purple #6A3460, Open Sans, pills filters
 """
 
-import sqlite3
-import json
-import os
+import sqlite3, json, os
 from datetime import datetime
 
 DB_PATH  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ofertas.db")
 OUT_DIR  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
 OUT_FILE = os.path.join(OUT_DIR, "index.html")
 
-AIRPORT_LABELS = {
-    "MAD": "Madrid", "BCN": "Barcelona", "BIO": "Bilbao",
-    "SVQ": "Sevilla", "VLC": "Valencia", "AGP": "Málaga",
-    "ALC": "Alicante", "OVD": "Asturias", "SCQ": "Santiago",
-    "SDR": "Santander", "ZAZ": "Zaragoza", "GRX": "Granada", "PMI": "Mallorca",
+# Pension normalizer — datos vienen de texto libre, muchos "Sin especificar"
+PENSION_EN = {
+    "Todo Incluido": "All Inclusive", "Media Pensión": "Half Board",
+    "Pensión Completa": "Full Board", "Desayuno": "Breakfast",
+    "Solo Alojamiento": "Room Only", "Sin especificar": "",
+}
+
+FUENTE_LABELS = {
+    "traventia":     "Traventia",
+    "buscounchollo": "BuscoUnChollo",
+    "weekendesk":    "Weekendesk",
 }
 
 
@@ -28,7 +29,6 @@ def load_data():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
 
-    # Cargar todas las ofertas activas con su precio mínimo
     rows = conn.execute("""
         SELECT
             o.id, o.url, o.fuente, o.titulo, o.destino, o.region, o.pais,
@@ -40,58 +40,49 @@ def load_data():
         WHERE o.activa = 1
         ORDER BY o.primera_vez DESC
     """).fetchall()
+    conn.close()
 
     ofertas = []
     for r in rows:
         d = dict(r)
-        # Parsear gemini_tags
-        try:
-            d["gemini_tags"] = json.loads(d.get("gemini_tags") or "[]")
-        except Exception:
-            d["gemini_tags"] = []
-        # Calcular bajada
+        try:    d["gemini_tags"] = json.loads(d.get("gemini_tags") or "[]")
+        except: d["gemini_tags"] = []
+
         if d.get("precio") and d.get("precio_anterior"):
             try:
                 d["bajada_pct"] = round(
                     (float(d["precio_anterior"]) - float(d["precio"])) /
                     float(d["precio_anterior"]) * 100
                 )
-            except Exception:
-                d["bajada_pct"] = None
+            except: d["bajada_pct"] = None
         else:
             d["bajada_pct"] = None
+
+        # Normalizar pension a inglés, vaciar "Sin especificar"
+        d["pension_en"] = PENSION_EN.get(d.get("pension",""), d.get("pension",""))
         ofertas.append(d)
 
-    # Stats
-    total    = len(ofertas)
-    bajadas  = sum(1 for o in ofertas if o.get("bajada_pct") and o["bajada_pct"] > 0)
-    precios  = [float(o["precio"]) for o in ofertas if o.get("precio")]
-    precio_min = round(min(precios)) if precios else 0
-    precio_med = round(sum(precios) / len(precios)) if precios else 0
+    stats = {
+        "total":    len(ofertas),
+        "generado": datetime.now().strftime("%d/%m/%Y %H:%M"),
+    }
 
-    # Valores únicos para filtros
-    fuentes    = sorted(set(o["fuente"]     for o in ofertas if o.get("fuente")))
-    paises     = sorted(set(o["pais"]       for o in ofertas if o.get("pais")))
-    regiones   = sorted(set(o["region"]     for o in ofertas if o.get("region")))
-    tipos      = sorted(set(o["tipo_viaje"] for o in ofertas if o.get("tipo_viaje")))
-    climas     = sorted(set(o["tipo_clima"] for o in ofertas if o.get("tipo_clima")))
-    pensiones  = sorted(set(o["pension"]    for o in ofertas if o.get("pension")))
-    estrellas  = sorted(set(o["estrellas"]  for o in ofertas if o.get("estrellas")))
+    # Filtros únicos
+    fuentes   = sorted(set(o["fuente"]     for o in ofertas if o.get("fuente")))
+    regiones  = sorted(set(o["region"]     for o in ofertas if o.get("region")))
+    paises    = sorted(set(o["pais"]       for o in ofertas if o.get("pais")))
+    tipos     = sorted(set(o["tipo_viaje"] for o in ofertas if o.get("tipo_viaje")))
+    climas    = sorted(set(o["tipo_clima"] for o in ofertas if o.get("tipo_clima")))
+    pensiones = sorted(set(o["pension_en"] for o in ofertas if o.get("pension_en")))
+    estrellas = sorted(set(o["estrellas"]  for o in ofertas if o.get("estrellas")))
 
-    conn.close()
     return {
-        "ofertas":   ofertas,
-        "stats": {
-            "total":      total,
-            "bajadas":    bajadas,
-            "precio_min": precio_min,
-            "precio_med": precio_med,
-            "generado":   datetime.now().strftime("%d/%m/%Y %H:%M"),
-        },
+        "ofertas": ofertas,
+        "stats":   stats,
         "filtros": {
             "fuentes":   fuentes,
-            "paises":    paises,
             "regiones":  regiones,
+            "paises":    paises,
             "tipos":     tipos,
             "climas":    climas,
             "pensiones": pensiones,
@@ -100,484 +91,422 @@ def load_data():
     }
 
 
-HTML_TEMPLATE = """<!DOCTYPE html>
-<html lang="es">
+def build():
+    print("📦 Reading database...")
+    data    = load_data()
+    stats   = data["stats"]
+    data_js = json.dumps(data, ensure_ascii=False)
+
+    os.makedirs(OUT_DIR, exist_ok=True)
+
+    html = HTML.replace("__DATA__",      data_js)\
+               .replace("__GENERATED__", stats["generado"])\
+               .replace("__TOTAL__",     str(stats["total"]))
+
+    with open(OUT_FILE, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"✅ {OUT_FILE} ({os.path.getsize(OUT_FILE)//1024} KB, {stats['total']} offers)")
+
+
+HTML = r"""<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ofertas de Viaje · Dashboard</title>
-  <style>
-    *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
-    :root {{
-      --bg: #f4f6fa; --surface: #fff; --border: #e2e8f0; --text: #1a202c;
-      --muted: #64748b; --primary: #2563eb; --primary-l: #dbeafe;
-      --green: #16a34a; --green-l: #dcfce7; --red: #dc2626; --red-l: #fee2e2;
-      --radius: 10px; --shadow: 0 1px 3px rgba(0,0,0,.08);
-      --shadow-md: 0 4px 12px rgba(0,0,0,.10);
-    }}
-    body {{ font-family: system-ui,-apple-system,sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }}
-    a {{ color: var(--primary); text-decoration: none; }}
-    button {{ cursor: pointer; font: inherit; border: none; }}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Partner Deals · HolidayPirates</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --hp:#6A3460;--hp-l:#f3eef2;--hp-m:#d4b8cf;
+  --black:#333;--white:#fff;--bg:#f7f4f6;--surface:#fff;
+  --border:#e8e0e6;--text:#333;--muted:#8a7a87;
+  --green:#a9d380;--green-l:#f0fae6;--green-d:#3d6b1a;
+  --radius:12px;--shadow:0 1px 4px rgba(106,52,96,.08);
+  --shadow-md:0 6px 20px rgba(106,52,96,.14);
+}
+body{font-family:"Open Sans",sans-serif;background:var(--bg);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased}
+a{text-decoration:none}
+button{cursor:pointer;font:inherit;border:none;background:none}
 
-    .topbar {{
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: 0 24px; height: 56px; display: flex; align-items: center;
-      justify-content: space-between; position: sticky; top: 0; z-index: 100;
-      box-shadow: var(--shadow);
-    }}
-    .topbar h1 {{ font-size: 18px; font-weight: 700; }}
-    .topbar-meta {{ font-size: 12px; color: var(--muted); }}
+/* ── Topbar ── */
+.topbar{
+  background:var(--hp);padding:0 24px;height:52px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 8px rgba(106,52,96,.3);
+}
+.topbar-brand{display:flex;align-items:center;gap:10px;color:#fff}
+.topbar-brand h1{font-size:16px;font-weight:700}
+.topbar-meta{font-size:12px;color:var(--hp-m)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.view-toggle{display:flex;gap:4px}
+.vbtn{padding:5px 10px;border-radius:8px;font-size:14px;color:rgba(255,255,255,.6);transition:all .15s}
+.vbtn.on{background:rgba(255,255,255,.2);color:#fff}
+.vbtn:hover{color:#fff}
 
-    .main {{ display: flex; height: calc(100vh - 56px); overflow: hidden; }}
+/* ── Filter bar ── */
+.filterbar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:10px 24px;display:flex;flex-direction:column;gap:8px;
+  position:sticky;top:52px;z-index:99;
+  box-shadow:0 2px 6px rgba(106,52,96,.06);
+}
+.frow{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.flabel{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--hp);white-space:nowrap;min-width:52px}
 
-    .sidebar {{
-      width: 255px; min-width: 255px; background: var(--surface);
-      border-right: 1px solid var(--border); overflow-y: auto;
-      padding: 16px; display: flex; flex-direction: column; gap: 11px;
-    }}
-    .sidebar h2 {{ font-size: 11px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .08em; color: var(--muted); }}
-    .fg {{ display: flex; flex-direction: column; gap: 5px; }}
-    .fg label {{ font-size: 12px; color: var(--muted); font-weight: 500; }}
-    .fg select, .fg input {{
-      width: 100%; padding: 7px 10px; border: 1px solid var(--border);
-      border-radius: 6px; background: var(--bg); font: inherit; font-size: 13px; outline: none;
-    }}
-    .fg select:focus, .fg input:focus {{ border-color: var(--primary); }}
-    .price-row {{ display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }}
-    .chip-group {{ display: flex; flex-wrap: wrap; gap: 5px; }}
-    .chip {{
-      padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
-      background: var(--bg); border: 1px solid var(--border); color: var(--muted); cursor: pointer;
-    }}
-    .chip:hover {{ border-color: var(--primary); color: var(--primary); }}
-    .chip.active {{ background: var(--primary-l); border-color: var(--primary); color: var(--primary); }}
-    .chip.bajada {{ background: var(--green-l); border-color: var(--green); color: var(--green); }}
-    .btn-reset {{
-      width: 100%; padding: 8px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: 6px; color: var(--muted); font-size: 13px; margin-top: auto;
-    }}
-    .btn-reset:hover {{ background: var(--red-l); border-color: var(--red); color: var(--red); }}
+/* Pills */
+.pill{
+  padding:5px 13px;border-radius:20px;font-size:12px;font-weight:600;
+  background:var(--bg);border:1.5px solid var(--border);color:var(--muted);
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.pill:hover{border-color:var(--hp);color:var(--hp)}
+.pill.on{background:var(--hp);border-color:var(--hp);color:#fff}
 
-    .content {{ flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }}
+/* Source pills with brand colors */
+.pill-traventia.on{background:#f59e0b;border-color:#f59e0b;color:#fff}
+.pill-traventia:hover{border-color:#f59e0b;color:#f59e0b}
+.pill-buscounchollo.on{background:#16a34a;border-color:#16a34a;color:#fff}
+.pill-buscounchollo:hover{border-color:#16a34a;color:#16a34a}
+.pill-weekendesk.on{background:#2563eb;border-color:#2563eb;color:#fff}
+.pill-weekendesk:hover{border-color:#2563eb;color:#2563eb}
 
-    .stats-bar {{ display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }}
-    .stat-card {{
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
-    }}
-    .stat-card .slabel {{ font-size: 11px; color: var(--muted); font-weight: 600;
-      text-transform: uppercase; letter-spacing: .06em; }}
-    .stat-card .svalue {{ font-size: 28px; font-weight: 700; margin-top: 4px; }}
-    .stat-card.blue .svalue {{ color: var(--primary); }}
-    .stat-card.green .svalue {{ color: var(--green); }}
+/* Search & select */
+.sw{position:relative;flex:1;max-width:300px}
+.sw input{
+  width:100%;padding:6px 12px 6px 30px;border:1.5px solid var(--border);
+  border-radius:20px;font:inherit;font-size:13px;background:var(--bg);outline:none;
+  transition:border-color .15s;
+}
+.sw input:focus{border-color:var(--hp)}
+.si{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
+.hp-sel{
+  padding:5px 11px;border:1.5px solid var(--border);border-radius:20px;
+  font:inherit;font-size:13px;background:var(--bg);outline:none;color:var(--text);cursor:pointer;
+}
+.hp-sel:focus{border-color:var(--hp)}
+.rc{font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap}
 
-    .toolbar {{
-      display: flex; align-items: center; gap: 10px; background: var(--surface);
-      border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 10px 14px; box-shadow: var(--shadow);
-    }}
-    .toolbar .sw {{ flex: 1; position: relative; }}
-    .toolbar .sw input {{
-      width: 100%; padding: 8px 12px 8px 34px; border: 1px solid var(--border);
-      border-radius: 6px; font: inherit; font-size: 13px; background: var(--bg); outline: none;
-    }}
-    .toolbar .sw input:focus {{ border-color: var(--primary); }}
-    .toolbar .si {{ position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); }}
-    .toolbar select {{
-      padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
-      font: inherit; font-size: 13px; background: var(--bg); outline: none;
-    }}
-    .rc {{ font-size: 13px; color: var(--muted); white-space: nowrap; }}
+/* ── Grid ── */
+.grid-wrap{padding:14px 24px 32px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(278px,1fr));gap:13px}
 
-    .grid {{ display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 14px; }}
+.card{
+  background:var(--surface);border-radius:var(--radius);overflow:hidden;
+  box-shadow:var(--shadow);transition:box-shadow .2s,transform .2s;
+  display:flex;flex-direction:column;border:1px solid var(--border);
+}
+.card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.card-img{height:155px;overflow:hidden;position:relative;flex-shrink:0;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--muted)}
+.card-img img{width:100%;height:100%;object-fit:cover;display:block}
+.drop-badge{position:absolute;top:8px;right:8px;background:var(--green);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px}
 
-    .card {{
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-      overflow: hidden; box-shadow: var(--shadow); transition: box-shadow .2s, transform .2s;
-      display: flex; flex-direction: column;
-    }}
-    .card:hover {{ box-shadow: var(--shadow-md); transform: translateY(-2px); }}
-    .card-img {{ width: 100%; height: 150px; object-fit: cover; background: var(--bg);
-      display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 32px; }}
-    .card-img img {{ width: 100%; height: 100%; object-fit: cover; }}
-    .card-body {{ padding: 12px 14px; flex: 1; display: flex; flex-direction: column; gap: 5px; }}
-    .card-fuente {{
-      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
-      padding: 2px 7px; border-radius: 4px; align-self: flex-start;
-    }}
-    .ft {{ background: #fef3c7; color: #92400e; }}
-    .fb {{ background: #dcfce7; color: #166534; }}
-    .fw {{ background: #dbeafe; color: #1e40af; }}
-    .card-title {{ font-size: 13px; font-weight: 600; line-height: 1.35; }}
-    .card-dest {{ font-size: 12px; color: var(--muted); }}
-    .badges {{ display: flex; flex-wrap: wrap; gap: 4px; }}
-    .badge {{
-      font-size: 11px; padding: 2px 7px; border-radius: 4px;
-      background: var(--bg); color: var(--muted); border: 1px solid var(--border);
-    }}
-    .badge.pension {{ background: #faf5ff; color: #7c3aed; border-color: #e9d5ff; }}
-    .badge.tipo    {{ background: #fff7ed; color: #c2410c; border-color: #fed7aa; }}
-    .badge.clima   {{ background: #f0fdf4; color: #166534; border-color: #bbf7d0; }}
-    .gtag {{
-      font-size: 10px; padding: 2px 6px; border-radius: 4px;
-      background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe;
-    }}
-    .card-footer {{
-      padding: 10px 14px 12px; display: flex; align-items: flex-end;
-      justify-content: space-between; border-top: 1px solid var(--border); margin-top: auto;
-    }}
-    .price-main {{ font-size: 22px; font-weight: 800; }}
-    .price-label {{ font-size: 11px; color: var(--muted); }}
-    .price-old {{ font-size: 12px; text-decoration: line-through; color: var(--muted); }}
-    .badge-down {{
-      font-size: 11px; font-weight: 700; padding: 3px 8px;
-      background: var(--green-l); color: var(--green); border-radius: 20px;
-    }}
-    .card-link {{
-      font-size: 12px; font-weight: 600; padding: 6px 12px;
-      background: var(--primary); color: white; border-radius: 6px;
-    }}
-    .card-link:hover {{ background: #1d4ed8; text-decoration: none; }}
+.card-body{padding:11px 13px;flex:1;display:flex;flex-direction:column;gap:4px}
+.src-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:4px;align-self:flex-start}
+.src-traventia{background:#fef3c7;color:#92400e}
+.src-buscounchollo{background:#dcfce7;color:#166534}
+.src-weekendesk{background:#dbeafe;color:#1e40af}
+.card-title{font-size:13px;font-weight:700;line-height:1.3}
+.card-loc{font-size:12px;color:var(--muted)}
+.card-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+.bdg{font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600}
+.bdg-tipo{background:#fff7ed;color:#c2410c}
+.bdg-clima{background:var(--green-l);color:var(--green-d)}
+.bdg-pension{background:var(--hp-l);color:var(--hp)}
+.bdg-stars{background:#fefce8;color:#9a7206}
+.gtag{font-size:10px;padding:2px 7px;border-radius:5px;background:var(--hp-l);color:var(--hp)}
 
-    .pagination {{ display: flex; align-items: center; justify-content: center; gap: 6px; }}
-    .pagination button {{
-      padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
-      background: var(--surface); font-size: 13px; color: var(--text);
-    }}
-    .pagination button:hover:not(:disabled) {{ border-color: var(--primary); color: var(--primary); }}
-    .pagination button.active {{ background: var(--primary); color: white; border-color: var(--primary); }}
-    .pagination button:disabled {{ opacity: .4; cursor: not-allowed; }}
+.card-footer{padding:9px 13px 12px;border-top:1px solid var(--border);display:flex;align-items:flex-end;justify-content:space-between;margin-top:auto}
+.price-main{font-size:22px;font-weight:800;color:var(--hp);line-height:1}
+.price-label{font-size:10px;color:var(--muted);margin-top:1px}
+.price-old{font-size:11px;color:var(--muted);text-decoration:line-through}
+.cta-btn{padding:7px 13px;background:var(--hp);color:#fff;border-radius:9px;font-size:12px;font-weight:700;white-space:nowrap;transition:background .15s}
+.cta-btn:hover{background:#4e2647}
 
-    .empty {{ text-align: center; padding: 60px; color: var(--muted); }}
-    .empty .icon {{ font-size: 48px; margin-bottom: 12px; }}
-  </style>
+/* ── List view ── */
+.list{display:flex;flex-direction:column}
+.list-item{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:stretch;transition:background .15s}
+.list-item:first-child{border-top:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;overflow:hidden}
+.list-item:last-child{border-radius:0 0 var(--radius) var(--radius);overflow:hidden}
+.list-item:hover{background:#faf7f9}
+.list-thumb{width:100px;min-width:100px;height:72px;overflow:hidden;flex-shrink:0;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--muted)}
+.list-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.list-body{flex:1;padding:9px 13px;display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0}
+.list-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-loc{font-size:12px;color:var(--muted)}
+.list-right{padding:9px 14px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:3px;min-width:140px;border-left:1px solid var(--border)}
+
+.empty{text-align:center;padding:80px 20px;color:var(--muted)}
+.empty .icon{font-size:52px;margin-bottom:12px}
+</style>
 </head>
 <body>
 
 <div class="topbar">
-  <h1>✈️ Ofertas de Viaje</h1>
-  <span class="topbar-meta">Actualizado: {generado} · {total} ofertas activas</span>
+  <div class="topbar-brand">
+    <svg width="24" height="24" viewBox="0 0 100 100"><path d="M50 8C31 8 16 23 16 42c0 27 34 52 34 52s34-25 34-52C84 23 69 8 50 8z" fill="rgba(255,255,255,.2)" stroke="#fff" stroke-width="3"/><circle cx="62" cy="34" r="13" fill="#e63030"/><circle cx="68" cy="30" r="3" fill="#fff"/><path d="M57 43 L44 54 L51 57 L47 67 L61 55 L54 52 Z" fill="#f39c12"/><path d="M47 24 L51 17 L55 24" fill="#27ae60"/></svg>
+    <h1>Partner Deals · HolidayPirates</h1>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-meta">Updated __GENERATED__ · __TOTAL__ offers</span>
+    <div class="view-toggle">
+      <button class="vbtn on" id="btn-grid" onclick="setView('grid')" title="Grid">⊞</button>
+      <button class="vbtn" id="btn-list" onclick="setView('list')" title="List">≡</button>
+    </div>
+  </div>
 </div>
 
-<div class="main">
-  <aside class="sidebar">
-    <h2>Filtros</h2>
+<!-- FILTERS -->
+<div class="filterbar">
 
-    <div class="fg">
-      <label>Buscar</label>
-      <input type="text" id="f-search" placeholder="Destino, hotel, extras…" oninput="applyFilters()">
+  <div class="frow">
+    <span class="flabel">Source</span>
+    <button class="pill on" data-g="source" data-v="">All</button>
+    <button class="pill pill-traventia" data-g="source" data-v="traventia">Traventia</button>
+    <button class="pill pill-buscounchollo" data-g="source" data-v="buscounchollo">BuscoUnChollo</button>
+    <button class="pill pill-weekendesk" data-g="source" data-v="weekendesk">Weekendesk</button>
+    <div class="sw" style="margin-left:auto">
+      <span class="si">🔍</span>
+      <input type="text" id="f-search" placeholder="Search destination, hotel…" oninput="applyFilters()">
     </div>
+    <select class="hp-sel" id="f-sort" onchange="applyFilters()">
+      <option value="recientes">Most recent</option>
+      <option value="precio_asc">Price ↑</option>
+      <option value="precio_desc">Price ↓</option>
+      <option value="bajada">Biggest drop</option>
+    </select>
+    <span class="rc" id="rc"></span>
+  </div>
 
-    <div class="fg">
-      <label>Estado precio</label>
-      <div class="chip-group">
-        <span class="chip bajada" id="chip-bajada" onclick="toggleBajada()">💚 Precio bajado</span>
-      </div>
-    </div>
+  <div class="frow">
+    <span class="flabel">Region</span>
+    <button class="pill on" data-g="region" data-v="">All</button>
+    <div id="region-pills" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  </div>
 
-    <div class="fg">
-      <label>Fuente</label>
-      <select id="f-fuente" onchange="applyFilters()"><option value="">Todas</option>{fuente_opts}</select>
-    </div>
+  <div class="frow">
+    <span class="flabel">Type</span>
+    <button class="pill on" data-g="tipo" data-v="">All</button>
+    <div id="tipo-pills" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    <span style="color:var(--border);margin:0 6px">|</span>
+    <span class="flabel">Climate</span>
+    <button class="pill on" data-g="clima" data-v="">All</button>
+    <div id="clima-pills" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  </div>
 
-    <div class="fg">
-      <label>País</label>
-      <select id="f-pais" onchange="applyFilters()"><option value="">Todos</option>{pais_opts}</select>
-    </div>
+  <div class="frow">
+    <span class="flabel">Board</span>
+    <button class="pill on" data-g="pension" data-v="">All</button>
+    <div id="pension-pills" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    <span style="color:var(--border);margin:0 6px">|</span>
+    <span class="flabel">Stars</span>
+    <button class="pill on" data-g="estrellas" data-v="">All</button>
+    <div id="estrellas-pills" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    <span style="color:var(--border);margin:0 6px">|</span>
+    <span class="flabel">Price</span>
+    <input type="number" id="f-pmin" placeholder="Min €" class="hp-sel" style="width:72px" oninput="applyFilters()">
+    <span style="color:var(--muted);font-size:13px">–</span>
+    <input type="number" id="f-pmax" placeholder="Max €" class="hp-sel" style="width:72px" oninput="applyFilters()">
+    <button class="pill" id="chip-drop" style="margin-left:8px" onclick="toggleDrop()">💚 Price drop</button>
+    <button style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;color:var(--muted);background:var(--bg);cursor:pointer" onclick="resetFilters()">✕ Clear</button>
+  </div>
 
-    <div class="fg">
-      <label>Región / CCAA</label>
-      <select id="f-region" onchange="applyFilters()"><option value="">Todas</option>{region_opts}</select>
-    </div>
+</div>
 
-    <div class="fg">
-      <label>Tipo de viaje</label>
-      <select id="f-tipo" onchange="applyFilters()"><option value="">Todos</option>{tipo_opts}</select>
-    </div>
-
-    <div class="fg">
-      <label>Entorno</label>
-      <select id="f-clima" onchange="applyFilters()"><option value="">Todos</option>{clima_opts}</select>
-    </div>
-
-    <div class="fg">
-      <label>Régimen</label>
-      <select id="f-pension" onchange="applyFilters()"><option value="">Todos</option>{pension_opts}</select>
-    </div>
-
-    <div class="fg">
-      <label>Estrellas</label>
-      <select id="f-estrellas" onchange="applyFilters()"><option value="">Todas</option>{estrellas_opts}</select>
-    </div>
-
-    <div class="fg">
-      <label>Precio €/persona</label>
-      <div class="price-row">
-        <input type="number" id="f-pmin" placeholder="Mín" oninput="applyFilters()">
-        <input type="number" id="f-pmax" placeholder="Máx" oninput="applyFilters()">
-      </div>
-    </div>
-
-    <button class="btn-reset" onclick="resetFilters()">✕ Limpiar filtros</button>
-  </aside>
-
-  <main class="content">
-    <div class="stats-bar">
-      <div class="stat-card blue"><div class="slabel">Activas</div><div class="svalue" id="st-total">{total}</div></div>
-      <div class="stat-card"><div class="slabel">Históricas</div><div class="svalue">{historico}</div></div>
-      <div class="stat-card green"><div class="slabel">Precio bajado</div><div class="svalue">{bajadas}</div></div>
-      <div class="stat-card"><div class="slabel">Precio medio</div><div class="svalue">{precio_med}€</div></div>
-    </div>
-
-    <div class="toolbar">
-      <div class="sw">
-        <span class="si">🔍</span>
-        <input type="text" id="t-search" placeholder="Buscar destino, hotel, extras…" oninput="syncSearch(this)">
-      </div>
-      <label style="font-size:12px;color:var(--muted);white-space:nowrap">Ordenar:</label>
-      <select id="f-orden" onchange="applyFilters()">
-        <option value="recientes">Más recientes</option>
-        <option value="precio_asc">Precio ↑</option>
-        <option value="precio_desc">Precio ↓</option>
-        <option value="bajada">Mayor bajada</option>
-      </select>
-      <span class="rc" id="rc"></span>
-    </div>
-
-    <div id="grid-container"></div>
-    <div class="pagination" id="pagination"></div>
-  </main>
+<!-- CONTENT -->
+<div class="grid-wrap">
+  <div id="content"></div>
 </div>
 
 <script>
-const DATA = {data_json};
+const D = __DATA__;
+const F = { source:"", region:"", tipo:"", clima:"", pension:"", estrellas:"", pmin:0, pmax:Infinity, search:"", drop:false };
+let viewMode = "grid";
 
-let filtered  = [];
-let page      = 1;
-const PER     = 48;
-let bajadaOn  = false;
-
-function syncSearch(el) {{
-  document.getElementById("f-search").value = el.value;
+window.addEventListener("DOMContentLoaded", () => {
+  buildPills("region-pills",   "region",    D.filtros.regiones);
+  buildPills("tipo-pills",     "tipo",      D.filtros.tipos);
+  buildPills("clima-pills",    "clima",     D.filtros.climas);
+  buildPills("pension-pills",  "pension",   D.filtros.pensiones);
+  buildPills("estrellas-pills","estrellas", D.filtros.estrellas);
+  bindPills();
   applyFilters();
-}}
+});
 
-function toggleBajada() {{
-  bajadaOn = !bajadaOn;
-  document.getElementById("chip-bajada").classList.toggle("active", bajadaOn);
-  applyFilters();
-}}
+function buildPills(containerId, group, values) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = "";
+  values.forEach(v => {
+    const b = document.createElement("button");
+    b.className = "pill"; b.dataset.g = group; b.dataset.v = v;
+    b.textContent = v; el.appendChild(b);
+  });
+}
 
-function g(id) {{ return document.getElementById(id)?.value || ""; }}
+function bindPills() {
+  document.addEventListener("click", e => {
+    const pill = e.target.closest(".pill[data-g]");
+    if (!pill) return;
+    const g = pill.dataset.g, v = pill.dataset.v;
+    document.querySelectorAll(`.pill[data-g="${g}"]`).forEach(p => p.classList.remove("on"));
+    pill.classList.add("on");
+    F[g] = v;
+    applyFilters();
+  });
+}
 
-function applyFilters() {{
-  const search   = (g("f-search") || g("t-search")).toLowerCase();
-  const fuente   = g("f-fuente");
-  const pais     = g("f-pais");
-  const region   = g("f-region");
-  const tipo     = g("f-tipo");
-  const clima    = g("f-clima");
-  const pension  = g("f-pension");
-  const estrellas = g("f-estrellas");
-  const pmin     = parseFloat(g("f-pmin")) || 0;
-  const pmax     = parseFloat(g("f-pmax")) || Infinity;
-  const orden    = g("f-orden");
-
-  filtered = DATA.ofertas.filter(o => {{
-    if (fuente   && o.fuente      !== fuente)   return false;
-    if (pais     && o.pais        !== pais)     return false;
-    if (region   && o.region      !== region)   return false;
-    if (tipo     && o.tipo_viaje  !== tipo)     return false;
-    if (clima    && o.tipo_clima  !== clima)    return false;
-    if (pension  && o.pension     !== pension)  return false;
-    if (estrellas && o.estrellas  !== estrellas) return false;
-    if (bajadaOn && !(o.bajada_pct > 0))        return false;
-    if (o.precio && o.precio < pmin)            return false;
-    if (o.precio && o.precio > pmax)            return false;
-    if (search) {{
-      const hay = (o.titulo||"") + (o.destino||"") + (o.region||"") + (o.extras||"");
-      if (!hay.toLowerCase().includes(search)) return false;
-    }}
-    return true;
-  }});
-
-  // Ordenar
-  if (orden === "precio_asc")  filtered.sort((a,b) => (a.precio||9999) - (b.precio||9999));
-  if (orden === "precio_desc") filtered.sort((a,b) => (b.precio||0)    - (a.precio||0));
-  if (orden === "bajada")      filtered.sort((a,b) => (b.bajada_pct||0) - (a.bajada_pct||0));
-  // recientes: ya viene ordenado por primera_vez DESC del build
-
-  document.getElementById("st-total").textContent = filtered.length;
-  document.getElementById("rc").textContent = filtered.length + " resultado" + (filtered.length===1?"":"s");
-
-  page = 1;
+function setView(mode) {
+  viewMode = mode;
+  document.getElementById("btn-grid").classList.toggle("on", mode==="grid");
+  document.getElementById("btn-list").classList.toggle("on", mode==="list");
   render();
-}}
+}
 
-function render() {{
-  const container = document.getElementById("grid-container");
-  const start = (page-1)*PER;
-  const slice = filtered.slice(start, start+PER);
+function toggleDrop() {
+  F.drop = !F.drop;
+  document.getElementById("chip-drop").classList.toggle("on", F.drop);
+  applyFilters();
+}
 
-  if (!slice.length) {{
-    container.innerHTML = '<div class="empty"><div class="icon">🏖️</div><p>Sin resultados.</p></div>';
-    document.getElementById("pagination").innerHTML = "";
+function applyFilters() {
+  F.pmin   = parseFloat(document.getElementById("f-pmin")?.value) || 0;
+  F.pmax   = parseFloat(document.getElementById("f-pmax")?.value) || Infinity;
+  F.search = (document.getElementById("f-search")?.value || "").toLowerCase();
+  const sort = document.getElementById("f-sort")?.value || "recientes";
+
+  let filtered = D.ofertas.filter(o => {
+    if (F.source    && o.fuente     !== F.source)    return false;
+    if (F.region    && o.region     !== F.region)    return false;
+    if (F.tipo      && o.tipo_viaje !== F.tipo)      return false;
+    if (F.clima     && o.tipo_clima !== F.clima)     return false;
+    if (F.pension   && o.pension_en !== F.pension)   return false;
+    if (F.estrellas && o.estrellas  !== F.estrellas) return false;
+    if (F.drop      && !(o.bajada_pct > 0))          return false;
+    if (o.precio && o.precio < F.pmin) return false;
+    if (o.precio && o.precio > F.pmax) return false;
+    if (F.search) {
+      const hay = ((o.titulo||"")+(o.destino||"")+(o.region||"")+(o.extras||"")).toLowerCase();
+      if (!hay.includes(F.search)) return false;
+    }
+    return true;
+  });
+
+  if (sort === "precio_asc")  filtered.sort((a,b) => (a.precio||9999)-(b.precio||9999));
+  if (sort === "precio_desc") filtered.sort((a,b) => (b.precio||0)-(a.precio||0));
+  if (sort === "bajada")      filtered.sort((a,b) => (b.bajada_pct||0)-(a.bajada_pct||0));
+
+  document.getElementById("rc").textContent = filtered.length + " result" + (filtered.length===1?"":"s");
+  window._filtered = filtered;
+  render();
+}
+
+function render() {
+  const el  = document.getElementById("content");
+  const filtered = window._filtered || [];
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty"><div class="icon">🏖️</div><p>No results found.</p></div>';
     return;
-  }}
+  }
+  el.innerHTML = "";
+  if (viewMode === "grid") {
+    const g = document.createElement("div"); g.className = "grid";
+    filtered.forEach(o => g.appendChild(makeCard(o)));
+    el.appendChild(g);
+  } else {
+    const l = document.createElement("div"); l.className = "list";
+    filtered.forEach(o => l.appendChild(makeRow(o)));
+    el.appendChild(l);
+  }
+}
 
-  const grid = document.createElement("div");
-  grid.className = "grid";
-  slice.forEach(o => grid.appendChild(card(o)));
-  container.innerHTML = "";
-  container.appendChild(grid);
-  renderPagination();
-}}
-
-function card(o) {{
-  const el = document.createElement("div");
-  el.className = "card";
-
-  const fClass = {{traventia:"ft", buscounchollo:"fb", weekendesk:"fw"}}[o.fuente] || "ft";
-  const fLabel = {{traventia:"Traventia", buscounchollo:"BuscoUnChollo", weekendesk:"Weekendesk"}}[o.fuente] || o.fuente;
-
-  const imgHtml = o.imagen_url
-    ? `<div class="card-img"><img src="${{o.imagen_url}}" loading="lazy" onerror="this.parentElement.innerHTML='✈️'"></div>`
-    : `<div class="card-img">✈️</div>`;
-
-  const badges = [
-    o.tipo_viaje  ? `<span class="badge tipo">${{o.tipo_viaje}}</span>`  : "",
-    o.tipo_clima  ? `<span class="badge clima">${{o.tipo_clima}}</span>` : "",
-    o.pension && o.pension !== "Sin especificar" ? `<span class="badge pension">${{o.pension}}</span>` : "",
-    o.estrellas   ? `<span class="badge">${{o.estrellas}}</span>` : "",
-  ].filter(Boolean).join("");
-
-  const gtags = (o.gemini_tags||[]).slice(0,3).map(t=>`<span class="gtag">✦ ${{t}}</span>`).join(" ");
-  const resumen = o.gemini_resumen ? `<div style="font-size:12px;color:var(--muted);font-style:italic">${{o.gemini_resumen}}</div>` : "";
+function makeCard(o) {
+  const el = document.createElement("div"); el.className = "card";
+  const img = o.imagen_url
+    ? `<img src="${esc(o.imagen_url)}" loading="lazy" alt="" onerror="this.parentElement.innerHTML='✈️'">`
+    : "✈️";
   const destino = [o.destino, o.region].filter(Boolean).join(" · ");
-
-  let priceHtml = "";
-  if (o.precio) {{
-    priceHtml += `<div class="price-main">${{Math.round(o.precio)}}€</div>`;
-    priceHtml += `<div class="price-label">/ persona</div>`;
-    if (o.bajada_pct > 0) {{
-      priceHtml += `<div class="price-old">${{Math.round(o.precio_anterior)}}€</div>`;
-    }}
-  }} else {{
-    priceHtml = `<div class="price-main" style="font-size:14px;color:var(--muted)">Consultar</div>`;
-  }}
-
-  const priceBadge = o.bajada_pct > 0 ? `<span class="badge-down">↓ ${{o.bajada_pct}}%</span>` : "";
+  const badges = [
+    o.tipo_viaje ? `<span class="bdg bdg-tipo">${esc(o.tipo_viaje)}</span>` : "",
+    o.tipo_clima ? `<span class="bdg bdg-clima">${esc(o.tipo_clima)}</span>` : "",
+    o.pension_en ? `<span class="bdg bdg-pension">${esc(o.pension_en)}</span>` : "",
+    o.estrellas  ? `<span class="bdg bdg-stars">${esc(o.estrellas)}</span>` : "",
+  ].filter(Boolean).join("");
+  const gtags = (o.gemini_tags||[]).slice(0,2).map(t=>`<span class="gtag">✦ ${esc(t)}</span>`).join(" ");
+  const resumen = o.gemini_resumen ? `<div style="font-size:11px;color:var(--muted);font-style:italic;margin-top:2px">${esc(o.gemini_resumen)}</div>` : "";
 
   el.innerHTML = `
-    ${{imgHtml}}
+    <div class="card-img">
+      ${img}
+      ${o.bajada_pct>0?`<div class="drop-badge">↓ ${o.bajada_pct}%</div>`:""}
+    </div>
     <div class="card-body">
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <span class="card-fuente ${{fClass}}">${{fLabel}}</span>
-        ${{o.duracion_noches ? `<span style="font-size:11px;color:var(--muted)">${{o.duracion_noches}}🌙</span>` : ""}}
+        <span class="src-badge src-${o.fuente}">${esc(o.fuente==="buscounchollo"?"BUC":o.fuente==="weekendesk"?"WKD":"TRV")}</span>
+        ${o.duracion_noches?`<span style="font-size:11px;color:var(--muted)">${o.duracion_noches}🌙</span>`:""}
       </div>
-      <div class="card-title">${{esc(o.titulo||"")}}</div>
-      ${{destino ? `<div class="card-dest">📍 ${{esc(destino)}}</div>` : ""}}
-      ${{resumen}}
-      <div class="badges">${{badges}}</div>
-      ${{gtags ? `<div style="display:flex;flex-wrap:wrap;gap:4px">${{gtags}}</div>` : ""}}
+      <div class="card-title">${esc(o.titulo||"")}</div>
+      ${destino?`<div class="card-loc">📍 ${esc(destino)}</div>`:""}
+      ${resumen}
+      <div class="card-badges">${badges}</div>
+      ${gtags?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px">${gtags}</div>`:""}
     </div>
     <div class="card-footer">
-      <div>${{priceHtml}}${{priceBadge}}</div>
-      <a href="${{o.url}}" target="_blank" class="card-link">Ver →</a>
-    </div>
-  `;
+      <div>
+        <div class="price-main">${o.precio?Math.round(o.precio)+"€":"—"}</div>
+        <div class="price-label">/ person</div>
+        ${o.bajada_pct>0&&o.precio_anterior?`<div class="price-old">${Math.round(o.precio_anterior)}€</div>`:""}
+      </div>
+      <a href="${esc(o.url)}" target="_blank" class="cta-btn">View →</a>
+    </div>`;
   return el;
-}}
+}
 
-function renderPagination() {{
-  const total = filtered.length;
-  const pages = Math.ceil(total / PER);
-  const el    = document.getElementById("pagination");
-  if (pages <= 1) {{ el.innerHTML = ""; return; }}
+function makeRow(o) {
+  const el = document.createElement("div"); el.className = "list-item";
+  const img = o.imagen_url
+    ? `<img src="${esc(o.imagen_url)}" loading="lazy" alt="" onerror="this.parentElement.innerHTML='✈️'">`
+    : "✈️";
+  const destino = [o.destino, o.region].filter(Boolean).join(", ");
+  const pension = o.pension_en ? `<span class="bdg bdg-pension" style="font-size:10px;padding:1px 6px">${esc(o.pension_en)}</span>` : "";
+  const tipo    = o.tipo_viaje ? `<span class="bdg bdg-tipo" style="font-size:10px;padding:1px 6px">${esc(o.tipo_viaje)}</span>` : "";
 
-  const btns = [];
-  btns.push(`<button onclick="goPage(${{page-1}})" ${{page===1?"disabled":""}}>‹</button>`);
-  for (let i=1; i<=pages; i++) {{
-    if (i===1||i===pages||Math.abs(i-page)<=2)
-      btns.push(`<button class="${{i===page?'active':''}}" onclick="goPage(${{i}})">${{i}}</button>`);
-    else if (Math.abs(i-page)===3) btns.push(`<span style="padding:0 4px">…</span>`);
-  }}
-  btns.push(`<button onclick="goPage(${{page+1}})" ${{page===pages?"disabled":""}}>›</button>`);
-  el.innerHTML = btns.join("");
-}}
+  el.innerHTML = `
+    <div class="list-thumb">${img}</div>
+    <div class="list-body">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="src-badge src-${o.fuente}" style="font-size:9px">${esc(o.fuente==="buscounchollo"?"BUC":o.fuente==="weekendesk"?"WKD":"TRV")}</span>
+        ${o.estrellas?`<span style="font-size:11px;color:#9a7206">${esc(o.estrellas)}</span>`:""}
+      </div>
+      <div class="list-name">${esc(o.titulo||"")}</div>
+      ${destino?`<div class="list-loc">📍 ${esc(destino)}</div>`:""}
+      <div style="display:flex;gap:4px;margin-top:2px">${tipo}${pension}</div>
+    </div>
+    <div class="list-right">
+      ${o.bajada_pct>0?`<div style="font-size:11px;font-weight:700;color:var(--green-d);background:var(--green-l);padding:2px 7px;border-radius:5px">↓ ${o.bajada_pct}%</div>`:""}
+      <div class="price-main" style="font-size:20px">${o.precio?Math.round(o.precio)+"€":"—"}</div>
+      <div class="price-label">/ person</div>
+      ${o.bajada_pct>0&&o.precio_anterior?`<div class="price-old">${Math.round(o.precio_anterior)}€</div>`:""}
+      <a href="${esc(o.url)}" target="_blank" class="cta-btn" style="font-size:11px;padding:5px 10px;margin-top:4px">View →</a>
+    </div>`;
+  return el;
+}
 
-function goPage(p) {{
-  const pages = Math.ceil(filtered.length / PER);
-  if (p<1||p>pages) return;
-  page = p;
-  render();
-  window.scrollTo({{top:0,behavior:"smooth"}});
-}}
-
-function resetFilters() {{
-  ["f-fuente","f-pais","f-region","f-tipo","f-clima","f-pension","f-estrellas","f-orden"].forEach(id=>{{
-    const el=document.getElementById(id); if(el) el.value="";
-  }});
-  ["f-search","t-search","f-pmin","f-pmax"].forEach(id=>{{
-    const el=document.getElementById(id); if(el) el.value="";
-  }});
-  bajadaOn = false;
-  document.getElementById("chip-bajada").classList.remove("active");
+function resetFilters() {
+  Object.keys(F).forEach(k => F[k] = k==="pmin"?0:k==="pmax"?Infinity:k==="drop"?false:"");
+  document.querySelectorAll(".pill[data-g]").forEach(p => p.classList.remove("on"));
+  document.querySelectorAll(".pill[data-v='']").forEach(p => p.classList.add("on"));
+  document.getElementById("chip-drop").classList.remove("on");
+  ["f-search","f-pmin","f-pmax"].forEach(id => { const el=document.getElementById(id); if(el) el.value=""; });
+  document.getElementById("f-sort").value = "recientes";
   applyFilters();
-}}
+}
 
-function esc(s) {{
-  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-}}
-
-// Inicializar
-applyFilters();
+function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 </script>
 </body>
 </html>"""
-
-
-def make_opts(values):
-    return "".join(f'<option value="{v}">{v}</option>' for v in values if v)
-
-
-def build():
-    print("📦 Leyendo DB...")
-    data = load_data()
-
-    os.makedirs(OUT_DIR, exist_ok=True)
-
-    stats   = data["stats"]
-    filtros = data["filtros"]
-    ofertas = data["ofertas"]
-
-    # Stats para header
-    conn2   = sqlite3.connect(DB_PATH)
-    historico = conn2.execute("SELECT COUNT(*) FROM ofertas").fetchone()[0]
-    conn2.close()
-
-    html = HTML_TEMPLATE.format(
-        generado      = stats["generado"],
-        total         = stats["total"],
-        historico     = historico,
-        bajadas       = stats["bajadas"],
-        precio_med    = stats["precio_med"],
-        fuente_opts   = make_opts(filtros["fuentes"]),
-        pais_opts     = make_opts(filtros["paises"]),
-        region_opts   = make_opts(filtros["regiones"]),
-        tipo_opts     = make_opts(filtros["tipos"]),
-        clima_opts    = make_opts(filtros["climas"]),
-        pension_opts  = make_opts(filtros["pensiones"]),
-        estrellas_opts= make_opts(filtros["estrellas"]),
-        data_json     = json.dumps({"ofertas": ofertas}, ensure_ascii=False),
-    )
-
-    with open(OUT_FILE, "w", encoding="utf-8") as f:
-        f.write(html)
-
-    size_kb = os.path.getsize(OUT_FILE) // 1024
-    print(f"✅ Generado: {OUT_FILE} ({size_kb} KB, {stats['total']} ofertas)")
 
 
 if __name__ == "__main__":

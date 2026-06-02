@@ -1,13 +1,5 @@
 """
-scrapers/buscounchollo.py
-Scrapea https://www.buscounchollo.com (carga JS con React → Playwright)
-
-Estructura real de las tarjetas:
-  <article>
-    <a href="/reserva-chollo/ID/slug">  ← enlace principal
-    <picture><img ...>                  ← imagen
-    <h2> Título </h2>
-    <span class="*price*"> 99€ </span>
+scrapers/buscounchollo.py — BuscoUnChollo con nuevas URLs
 """
 
 import re
@@ -29,12 +21,12 @@ SCRAPE_URLS = [
     "https://www.buscounchollo.com/tematicos/chollos-playa/1/",
     "https://www.buscounchollo.com/tematicos/chollos-toboganes/155/",
     "https://www.buscounchollo.com/regimenes/todo-incluido/169/",
+    "https://www.buscounchollo.com/escapadas/escapada-rural/159/",
+    "https://www.buscounchollo.com/tematicos/viajes-ferry/284/",
 ]
 
 
 def _parse_card(card) -> dict | None:
-    # ── Enlace principal ──────────────────────────────────────────────────────
-    # BuscoUnChollo usa /reserva-chollo/ o /chollo/
     link = (
         card.select_one("a[href*='/reserva-chollo/']") or
         card.select_one("a[href*='/chollo/']") or
@@ -47,7 +39,6 @@ def _parse_card(card) -> dict | None:
         return None
     url = href if href.startswith("http") else BASE_URL + href
 
-    # ── Título ────────────────────────────────────────────────────────────────
     title_tag = (
         card.select_one("h2") or
         card.select_one("h3") or
@@ -55,8 +46,6 @@ def _parse_card(card) -> dict | None:
         card.select_one("[class*='nombre']")
     )
     titulo = clean_text(title_tag.get_text(strip=True)) if title_tag else ""
-
-    # Si no hay h2/h3, intentar sacar del atributo alt de la imagen
     if not titulo:
         img = card.select_one("img")
         if img:
@@ -64,16 +53,11 @@ def _parse_card(card) -> dict | None:
     if not titulo:
         return None
 
-    # ── Precio ────────────────────────────────────────────────────────────────
-    # BuscoUnChollo: <span class="chollo-price">399</span> <span>&nbsp;€</span>
+    # Precio: span.chollo-price
     price_text = None
-
-    # 1. Clase exacta chollo-price
     price_tag = card.select_one("span.chollo-price")
     if price_tag:
         price_text = price_tag.get_text(strip=True) + "€"
-
-    # 2. Fallback: clases genéricas con "price"
     if not price_text:
         price_tag = card.select_one(
             "[class*='price'], [class*='Price'], [class*='precio'], "
@@ -81,8 +65,6 @@ def _parse_card(card) -> dict | None:
         )
         if price_tag:
             price_text = price_tag.get_text(strip=True)
-
-    # 3. Fallback: número justo antes de un nodo con €
     if not price_text:
         for tag in card.find_all(string=re.compile(r"^\s*€\s*$")):
             prev = tag.find_previous(string=re.compile(r"\d+"))
@@ -90,17 +72,13 @@ def _parse_card(card) -> dict | None:
                 price_text = prev.strip() + "€"
                 break
 
-    # ── Destino ───────────────────────────────────────────────────────────────
     dest_tag = card.select_one(
         "[class*='destination'], [class*='Destination'], "
         "[class*='destino'], [class*='location'], [class*='Location'], "
         "[class*='city'], [class*='lugar']"
     )
-    destino = clean_text(dest_tag.get_text(strip=True)) if dest_tag else ""
-    if not destino:
-        destino = titulo  # extraer del título como fallback
+    destino = clean_text(dest_tag.get_text(strip=True)) if dest_tag else titulo
 
-    # ── Imagen ────────────────────────────────────────────────────────────────
     img_tag = card.select_one("img")
     imagen = None
     if img_tag:
@@ -138,25 +116,19 @@ def _parse_card(card) -> dict | None:
 
 
 def _parse_html(html: str) -> list[dict]:
-    soup   = BeautifulSoup(html, "html.parser")
-    offers = []
-
-    # Tarjetas principales: <article>
+    soup  = BeautifulSoup(html, "html.parser")
     cards = soup.select("article")
-
-    # Fallback si no hay article
     if not cards:
         cards = (
             soup.select("div[class*='offer-card'], div[class*='OfferCard']") or
             soup.select("div[class*='chollo-card'], div[class*='CholloCard']") or
             soup.select("a[href*='/reserva-chollo/']")
         )
-
+    offers = []
     for card in cards:
         o = _parse_card(card)
         if o and o.get("titulo"):
             offers.append(o)
-
     return offers
 
 
@@ -174,14 +146,11 @@ def scrape() -> list[dict]:
             print(f"      {url}")
             try:
                 page.goto(url, wait_until="networkidle", timeout=30000)
-
-                # Esperar a que aparezcan los articles
                 try:
                     page.wait_for_selector("article", timeout=12000)
                 except Exception:
                     pass
 
-                # Scroll para cargar lazy-load
                 prev = 0
                 for _ in range(10):
                     page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
