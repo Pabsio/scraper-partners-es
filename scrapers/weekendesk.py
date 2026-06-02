@@ -73,6 +73,15 @@ def _parse_card(card) -> dict | None:
     n_stars = sum(1 for s in star_icons if any("star" in c for c in (s.get("class") or [])))
     estrellas = f"{n_stars}★" if n_stars > 0 else extract_estrellas(titulo)
 
+    # Extraer número de noches del texto "N noche(s) para 2 desde"
+    noches_wd = None
+    price_context = card.select_one("[class*='price__'], [class*='lowerContent']")
+    if price_context:
+        ctx = price_context.get_text(separator=" ", strip=True)
+        m = re.search(r"(\d+)\s*noche", ctx, re.IGNORECASE)
+        if m:
+            noches_wd = int(m.group(1))
+
     price_text = None
     price_tag = card.select_one("[class*='sellPrice']")
     if price_tag:
@@ -118,11 +127,11 @@ def _parse_card(card) -> dict | None:
         "estrellas":       estrellas,
         "pension":         pension,
         "extras":          extract_extras(combined),
-        "precio":          parse_price(price_text) if price_text else None,
+        "precio":          round(parse_price(price_text) * (noches_wd or 1) / 2, 2) if parse_price(price_text) else None,
         "moneda":          "EUR",
-        "precio_por":      "noche",
+        "precio_por":      "persona",
         "imagen_url":      imagen,
-        "duracion_noches": extract_noches(combined),
+        "duracion_noches": noches_wd or extract_noches(combined),
         "adultos_min":     2,
     }
 
