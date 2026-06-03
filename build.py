@@ -582,7 +582,7 @@ function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
   if (signoutBtn) signoutBtn.addEventListener('click', () => netlifyIdentity.logout());
 
   // Initialize AFTER listeners are attached
-  netlifyIdentity.init();
+  netlifyIdentity.init({ APIUrl: "https://scraper-partners-es.netlify.app/.netlify/identity" });
 
   // Safety net: if login already happened and the event was missed, check directly
   setTimeout(() => {
