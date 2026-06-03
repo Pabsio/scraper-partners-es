@@ -33,7 +33,7 @@ def load_data():
         SELECT
             o.id, o.url, o.fuente, o.titulo, o.destino, o.region, o.pais,
             o.tipo_clima, o.tipo_viaje, o.estrellas, o.pension, o.extras,
-            o.precio, o.precio_anterior, o.precio_min, o.imagen_url,
+            o.precio, o.precio_anterior, o.precio_min, o.precio_por, o.imagen_url,
             o.duracion_noches, o.gemini_tags, o.gemini_resumen,
             o.primera_vez, o.ultima_vez
         FROM ofertas o
@@ -239,16 +239,43 @@ button{cursor:pointer;font:inherit;border:none;background:none}
 
 .empty{text-align:center;padding:80px 20px;color:var(--muted)}
 .empty .icon{font-size:52px;margin-bottom:12px}
+
+  #auth-gate{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px}
+  #auth-gate .auth-box{background:#fff;border-radius:18px;padding:40px 48px;text-align:center;box-shadow:0 8px 40px rgba(106,52,96,.12);max-width:380px;width:90%}
+  #auth-gate .auth-title{font-size:22px;font-weight:800;color:var(--hp);margin-bottom:8px}
+  #auth-gate .auth-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+  #auth-gate .auth-btn{width:100%;font-family:inherit;font-size:14px;font-weight:700;padding:13px;border-radius:20px;border:none;background:var(--hp);color:#fff;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:10px}
+  #auth-gate .auth-btn:hover{opacity:.88}
+  #auth-gate .auth-error{color:#c0392b;font-size:12px;margin-top:12px;display:none}
+  #app-content{display:none}
+  .signout-btn{font-family:inherit;font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;border:1.5px solid rgba(255,255,255,.3);background:none;color:rgba(255,255,255,.8);cursor:pointer;transition:all .15s}
+  .signout-btn:hover{background:rgba(255,255,255,.15);color:#fff}
 </style>
 </head>
 <body>
+
+<!-- AUTH GATE -->
+<div id="auth-gate">
+  <div class="auth-box">
+    <div style="font-size:40px;margin-bottom:12px">🏴‍☠️</div>
+    <div class="auth-title">Partner Deals</div>
+    <div class="auth-sub">Sign in with your HolidayPirates account to continue</div>
+    <button class="auth-btn" id="login-btn">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#fff" d="M9 3.48c1.69 0 2.83.73 3.48 1.34l2.54-2.48C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.96l2.91 2.26C4.6 5.05 6.62 3.48 9 3.48z"/><path fill="#fff" d="M17.64 9.2c0-.74-.06-1.28-.19-1.84H9v3.34h4.96c-.1.83-.64 2.08-1.84 2.92l2.84 2.2c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#fff" d="M3.88 10.78A5.54 5.54 0 0 1 3.58 9c0-.62.11-1.22.29-1.78L.96 4.96A9.008 9.008 0 0 0 0 9c0 1.45.35 2.82.96 4.04l2.92-2.26z"/><path fill="#fff" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.84-2.2c-.76.53-1.78.9-3.12.9-2.38 0-4.4-1.57-5.12-3.74L.97 13.04C2.45 15.98 5.48 18 9 18z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="auth-error" id="auth-error">Access restricted to @holidaypirates.com accounts.</div>
+  </div>
+</div>
+
+<div id="app-content">
 
 <div class="topbar">
   <div class="topbar-brand">
     <svg width="24" height="24" viewBox="0 0 100 100"><path d="M50 8C31 8 16 23 16 42c0 27 34 52 34 52s34-25 34-52C84 23 69 8 50 8z" fill="rgba(255,255,255,.2)" stroke="#fff" stroke-width="3"/><circle cx="62" cy="34" r="13" fill="#e63030"/><circle cx="68" cy="30" r="3" fill="#fff"/><path d="M57 43 L44 54 L51 57 L47 67 L61 55 L54 52 Z" fill="#f39c12"/><path d="M47 24 L51 17 L55 24" fill="#27ae60"/></svg>
     <h1>Partner Deals · HolidayPirates</h1>
   </div>
-  <div class="topbar-right">
+  <div class="topbar-right"><button class="signout-btn" id="signout-btn">Sign out</button>
     <span class="topbar-meta">Updated __GENERATED__ · __TOTAL__ offers</span>
     <div class="view-toggle">
       <button class="vbtn on" id="btn-grid" onclick="setView('grid')" title="Grid">⊞</button>
@@ -455,7 +482,7 @@ function makeCard(o) {
     <div class="card-footer">
       <div>
         <div class="price-main">${o.precio?Math.round(o.precio)+"€":"—"}</div>
-        <div class="price-label">/ person</div>
+        <div class="price-label">/ ${o.precio_por==="noche"?"night":"person"}</div>
         ${o.bajada_pct>0&&o.precio_anterior?`<div class="price-old">${Math.round(o.precio_anterior)}€</div>`:""}
       </div>
       <a href="${esc(o.url)}" target="_blank" class="cta-btn">View →</a>
@@ -486,7 +513,7 @@ function makeRow(o) {
     <div class="list-right">
       ${o.bajada_pct>0?`<div style="font-size:11px;font-weight:700;color:var(--green-d);background:var(--green-l);padding:2px 7px;border-radius:5px">↓ ${o.bajada_pct}%</div>`:""}
       <div class="price-main" style="font-size:20px">${o.precio?Math.round(o.precio)+"€":"—"}</div>
-      <div class="price-label">/ person</div>
+      <div class="price-label">/ ${o.precio_por==="noche"?"night":"person"}</div>
       ${o.bajada_pct>0&&o.precio_anterior?`<div class="price-old">${Math.round(o.precio_anterior)}€</div>`:""}
       <a href="${esc(o.url)}" target="_blank" class="cta-btn" style="font-size:11px;padding:5px 10px;margin-top:4px">View →</a>
     </div>`;
@@ -504,6 +531,38 @@ function resetFilters() {
 }
 
 function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+</script>
+</div><!-- /app-content -->
+
+<!-- NETLIFY IDENTITY -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+  const gate     = document.getElementById('auth-gate');
+  const appDiv   = document.getElementById('app-content');
+  const loginBtn = document.getElementById('login-btn');
+  const errMsg   = document.getElementById('auth-error');
+  const signoutBtn = document.getElementById('signout-btn');
+  function checkUser(user) {
+    if (!user) return;
+    const email = (user.email || (user.user_metadata && user.user_metadata.email) || "").toLowerCase().trim();
+    if (!email) { setTimeout(() => checkUser(netlifyIdentity.currentUser()), 400); return; }
+    if (email.endsWith("@holidaypirates.com")) {
+      gate.style.display   = "none";
+      appDiv.style.display = "block";
+    } else {
+      sessionStorage.setItem('deck_domain_error', '1');
+      netlifyIdentity.logout();
+    }
+  }
+  netlifyIdentity.on('init', user => {
+    if (sessionStorage.getItem('deck_domain_error')) { errMsg.style.display='block'; sessionStorage.removeItem('deck_domain_error'); }
+    checkUser(user);
+  });
+  netlifyIdentity.on('login', user => { netlifyIdentity.close(); checkUser(user); });
+  netlifyIdentity.on('logout', () => location.reload());
+  loginBtn.addEventListener('click', () => { errMsg.style.display='none'; netlifyIdentity.open('login'); });
+  if (signoutBtn) signoutBtn.addEventListener('click', () => netlifyIdentity.logout());
+  netlifyIdentity.init();
 </script>
 </body>
 </html>"""
