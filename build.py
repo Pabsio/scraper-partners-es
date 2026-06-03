@@ -541,11 +541,18 @@ function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
   const appDiv   = document.getElementById('app-content');
   const loginBtn = document.getElementById('login-btn');
   const errMsg   = document.getElementById('auth-error');
-  const signoutBtn = document.getElementById('signout-btn');
+
   function checkUser(user) {
     if (!user) return;
-    const email = (user.email || (user.user_metadata && user.user_metadata.email) || "").toLowerCase().trim();
-    if (!email) { setTimeout(() => checkUser(netlifyIdentity.currentUser()), 400); return; }
+    const email = (
+      user.email ||
+      (user.user_metadata && user.user_metadata.email) ||
+      ""
+    ).toLowerCase().trim();
+    if (!email) {
+      setTimeout(() => checkUser(netlifyIdentity.currentUser()), 400);
+      return;
+    }
     if (email.endsWith("@holidaypirates.com")) {
       gate.style.display   = "none";
       appDiv.style.display = "block";
@@ -554,16 +561,34 @@ function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
       netlifyIdentity.logout();
     }
   }
+
+  // Register listeners BEFORE init so we never miss the event
   netlifyIdentity.on('init', user => {
-    if (sessionStorage.getItem('deck_domain_error')) { errMsg.style.display='block'; sessionStorage.removeItem('deck_domain_error'); }
+    if (sessionStorage.getItem('deck_domain_error')) {
+      errMsg.style.display = 'block';
+      sessionStorage.removeItem('deck_domain_error');
+    }
     checkUser(user);
   });
   netlifyIdentity.on('login', user => { netlifyIdentity.close(); checkUser(user); });
   netlifyIdentity.on('logout', () => location.reload());
-  loginBtn.addEventListener('click', () => { errMsg.style.display='none'; netlifyIdentity.open('login'); });
+
+  loginBtn.addEventListener('click', () => {
+    errMsg.style.display = 'none';
+    netlifyIdentity.open('login');
+  });
+
+  const signoutBtn = document.getElementById('signout-btn');
   if (signoutBtn) signoutBtn.addEventListener('click', () => netlifyIdentity.logout());
-  netlifyIdentity.setSiteURL("https://scraper-partners-es.netlify.app");
+
+  // Initialize AFTER listeners are attached
   netlifyIdentity.init();
+
+  // Safety net: if login already happened and the event was missed, check directly
+  setTimeout(() => {
+    const u = netlifyIdentity.currentUser();
+    if (u) checkUser(u);
+  }, 800);
 </script>
 </body>
 </html>"""
