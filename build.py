@@ -562,6 +562,7 @@ function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
   netlifyIdentity.on('logout', () => location.reload());
   loginBtn.addEventListener('click', () => { errMsg.style.display='none'; netlifyIdentity.open('login'); });
   if (signoutBtn) signoutBtn.addEventListener('click', () => netlifyIdentity.logout());
+  netlifyIdentity.setSiteURL("https://scraper-partners-es.netlify.app");
   netlifyIdentity.init();
 </script>
 </body>
