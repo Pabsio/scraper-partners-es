@@ -538,6 +538,12 @@ function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
 </div><!-- /app-content -->
 
 <!-- NETLIFY IDENTITY -->
+<script>
+  // Set site URL before widget loads so it auto-configures correctly
+  window.netlifyIdentityConfig = {
+    APIUrl: "https://scraper-partners-es.netlify.app/.netlify/identity"
+  };
+</script>
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
   const gate     = document.getElementById('auth-gate');
@@ -586,7 +592,7 @@ function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
   if (signoutBtn) signoutBtn.addEventListener('click', () => netlifyIdentity.logout());
 
   // Initialize AFTER listeners are attached
-  netlifyIdentity.init({ APIUrl: "https://cda8b8f2-51e5-4025-ab65-1e6f0a4e9a37.netlify.app/.netlify/identity" });
+  netlifyIdentity.init();
 
   // Safety net: if login already happened and the event was missed, check directly
   setTimeout(() => {
