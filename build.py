@@ -537,12 +537,9 @@ function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
 </script>
 </div><!-- /app-content -->
 
-<!-- NETLIFY IDENTITY via GoTrue -->
-<script src="https://cdn.jsdelivr.net/npm/gotrue-js@0.9.29/browser/gotrue.js"></script>
+<!-- NETLIFY IDENTITY -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
-  const IDENTITY_URL = "https://scraper-partners-es.netlify.app/.netlify/identity";
-  const auth = new GoTrue({ APIUrl: IDENTITY_URL, setCookie: true });
-
   const gate       = document.getElementById('auth-gate');
   const appDiv     = document.getElementById('app-content');
   const loginBtn   = document.getElementById('login-btn');
@@ -551,36 +548,48 @@ function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
 
   function checkUser(user) {
     if (!user) return;
-    const email = (user.email || "").toLowerCase().trim();
+    const email = (
+      user.email ||
+      (user.user_metadata && user.user_metadata.email) ||
+      ""
+    ).toLowerCase().trim();
+    if (!email) {
+      setTimeout(() => checkUser(netlifyIdentity.currentUser()), 400);
+      return;
+    }
     if (email.endsWith("@holidaypirates.com")) {
-      gate.style.display = "none";
+      gate.style.display   = "none";
       appDiv.style.display = "block";
       initApp();
     } else {
       sessionStorage.setItem("partner_deals_domain_error", "1");
-      auth.logout().then(() => location.reload());
+      netlifyIdentity.logout();
     }
   }
 
-  // Check if already logged in
-  const currentUser = auth.currentUser();
-  if (currentUser) {
-    checkUser(currentUser);
-  } else if (sessionStorage.getItem("partner_deals_domain_error")) {
-    errMsg.style.display = "block";
-    sessionStorage.removeItem("partner_deals_domain_error");
-  }
+  netlifyIdentity.on('init',   user => {
+    if (sessionStorage.getItem("partner_deals_domain_error")) {
+      errMsg.style.display = "block";
+      sessionStorage.removeItem("partner_deals_domain_error");
+    }
+    checkUser(user);
+  });
+  netlifyIdentity.on('login',  user => { netlifyIdentity.close(); checkUser(user); });
+  netlifyIdentity.on('logout', ()   => location.reload());
 
   loginBtn.addEventListener('click', () => {
     errMsg.style.display = "none";
-    auth.loginWithProvider("google")
-      .then(user => checkUser(user))
-      .catch(e => { errMsg.textContent = e.message; errMsg.style.display = "block"; });
+    netlifyIdentity.open('login');
   });
 
-  if (signoutBtn) signoutBtn.addEventListener('click', () => {
-    auth.logout().then(() => location.reload());
-  });
+  if (signoutBtn) signoutBtn.addEventListener('click', () => netlifyIdentity.logout());
+
+  netlifyIdentity.init({ APIUrl: "https://scraper-partners-es.netlify.app/.netlify/identity" });
+
+  setTimeout(() => {
+    const u = netlifyIdentity.currentUser();
+    if (u) checkUser(u);
+  }, 800);
 </script>
 </body>
 </html>"""
