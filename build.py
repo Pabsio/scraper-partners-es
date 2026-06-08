@@ -561,7 +561,7 @@ function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
     .then(r => r.json())
     .then(user => {
       const email = (user.email || '').toLowerCase();
-      if (email.endsWith('@holidaypirates.com')) {
+      if (email.endsWith('@holidaypirates.com') || email.endsWith('@extern.holidaypirates.com')) {
         localStorage.setItem('hp_token', token);
         localStorage.setItem('hp_email', email);
         window.location.hash = '';
@@ -590,17 +590,15 @@ function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
 
   function checkExistingSession() {
     const token = localStorage.getItem('hp_token');
-    const email = localStorage.getItem('hp_email');
-    if (!token || !email) return false;
-    // Verify token is still valid
-    fetch(IDENTITY + '/user', {
-      headers: { Authorization: 'Bearer ' + token }
-    })
-    .then(r => {
-      if (r.ok) showApp(email);
-      else { localStorage.removeItem('hp_token'); localStorage.removeItem('hp_email'); }
-    })
-    .catch(() => { localStorage.removeItem('hp_token'); localStorage.removeItem('hp_email'); });
+    if (!token) return false;
+    fetch(IDENTITY + '/user', { headers: { Authorization: 'Bearer ' + token } })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(user => {
+        const realEmail = (user.email || '').toLowerCase();
+        if (isAllowed(realEmail)) showApp(realEmail);
+        else { localStorage.removeItem('hp_token'); localStorage.removeItem('hp_email'); }
+      })
+      .catch(() => { localStorage.removeItem('hp_token'); localStorage.removeItem('hp_email'); });
     return true;
   }
 
