@@ -1,0 +1,29 @@
+functionsDirectory = "/Users/p.santaella/Documents/Enrichment agent/netlify/functions"
+functionsDirectoryOrigin = "config"
+plugins = []
+headers = []
+redirects = []
+
+[build]
+publish = "/Users/p.santaella/Documents/Enrichment agent"
+publishOrigin = "config"
+commandOrigin = "ui"
+functions = "/Users/p.santaella/Documents/Enrichment agent/netlify/functions"
+
+[build.environment]
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[functions]
+
+[functions."*"]

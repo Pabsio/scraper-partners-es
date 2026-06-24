@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Enrichment Agent · Curator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Open Sans',sans-serif;background:#f5f0f5;color:#333;min-height:100vh}
+    .header{background:#6A3460;padding:1.1rem 2rem;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+    .header h1{font-size:17px;font-weight:800;color:#fff}
+    .header .sub{font-size:13px;color:rgba(255,255,255,.65);margin-top:3px}
+    .ibtn{padding:7px 16px;background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.25);border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+    .ibtn:hover{background:rgba(255,255,255,.22)}
+    .tabs-bar{background:#6A3460;padding:0 2rem;display:flex;gap:4px;align-items:flex-end}
+    .tab{padding:10px 24px 11px;font-size:15px;font-weight:700;cursor:pointer;border-radius:10px 10px 0 0;color:rgba(255,255,255,.6);background:transparent;border:none;font-family:inherit;transition:all .15s}
+    .tab:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.08)}
+    .tab.active{background:#f5f0f5;color:#6A3460}
+    .page{padding:1.5rem 2rem;max-width:1060px;margin:0 auto}
+    .tab-panel{display:none}.tab-panel.active{display:block}
+    .disc{background:#fdf8e8;border:1.5px solid #f0d060;border-radius:12px;padding:1rem 1.4rem;margin-bottom:1rem;display:flex;gap:10px;font-size:14px;color:#7a6000;line-height:1.55}
+    .sec{background:#fff;border:1px solid #e4dce4;border-radius:14px;padding:1.3rem 1.7rem;margin-bottom:.9rem;box-shadow:0 1px 4px rgba(106,52,96,.09)}
+    .sec-t{font-size:12px;font-weight:700;color:#6A3460;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.9rem}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    /* single-select chip */
+    .chip{padding:8px 20px;border-radius:20px;font-size:16px;font-weight:600;cursor:pointer;border:1.5px solid #e4dce4;background:#fff;color:#888;transition:all .1s;user-select:none;font-family:inherit}
+    .chip:hover{border-color:#6A3460;color:#6A3460}
+    .chip.on{background:#6A3460;border-color:#6A3460;color:#fff}
+    .chip.disabled{opacity:.4;cursor:default;pointer-events:none}
+    /* multi-select chip — same visual but togglable */
+    .mchip{padding:8px 20px;border-radius:20px;font-size:16px;font-weight:600;cursor:pointer;border:1.5px solid #e4dce4;background:#fff;color:#888;transition:all .1s;user-select:none;font-family:inherit}
+    .mchip:hover{border-color:#6A3460;color:#6A3460}
+    .mchip.on{background:#6A3460;border-color:#6A3460;color:#fff}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+    .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2rem;align-items:start}
+    .rng{display:flex;flex-direction:column;gap:6px}
+    .rng-lbl{font-size:16px;font-weight:700;color:#6A3460}
+    .rng-track{position:relative;height:5px;background:#e4dce4;border-radius:99px;margin:10px 4px}
+    .rng-fill{position:absolute;height:5px;background:#6A3460;border-radius:99px}
+    .rng-inputs{position:relative;height:0}
+    .rng-inputs input[type=range]{position:absolute;width:100%;top:-11px;appearance:none;background:transparent;pointer-events:none}
+    .rng-inputs input[type=range]::-webkit-slider-thumb{appearance:none;width:20px;height:20px;border-radius:50%;background:#6A3460;border:2px solid #fff;box-shadow:0 0 0 2px #6A3460;pointer-events:all;cursor:pointer}
+    .rng-ends{display:flex;justify-content:space-between;font-size:13px;color:#bbb;margin-top:12px}
+    .rng-ti{display:flex;align-items:center;gap:8px;margin-top:10px}
+    .rng-ti input[type=number]{width:72px;padding:7px 8px;border:1.5px solid #e4dce4;border-radius:8px;font-size:16px;font-weight:700;color:#6A3460;text-align:center;font-family:inherit;background:#fff}
+    .rng-ti input[type=number]:focus{outline:none;border-color:#6A3460}
+    .rng-ti span{font-size:15px;color:#bbb}
+    .rng-single input[type=range]{width:100%;appearance:none;background:transparent;display:block;margin-top:6px}
+    .rng-single input[type=range]::-webkit-slider-thumb{appearance:none;width:20px;height:20px;border-radius:50%;background:#6A3460;border:2px solid #fff;box-shadow:0 0 0 2px #6A3460;cursor:pointer}
+    .res-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;flex-wrap:wrap;gap:10px}
+    .res-count{font-size:18px;font-weight:800;color:#6A3460}
+    .res-sub{font-size:13px;color:#bbb;margin-left:6px}
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap}
+    .btn-t20{padding:10px 20px;background:#fff;color:#6A3460;border:1.5px solid #6A3460;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .12s}
+    .btn-t20:hover{background:#6A3460;color:#fff}
+    .btn-desel{padding:10px 20px;background:#fff;color:#888;border:1.5px solid #e4dce4;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .12s}
+    .btn-desel:hover{border-color:#6A3460;color:#6A3460}
+    .btn-desel:disabled,.btn-copy:disabled{opacity:.3;cursor:default}
+    .btn-copy{padding:10px 22px;background:#6A3460;color:#fff;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .12s}
+    .btn-copy:hover:not(:disabled){background:#55285a}
+    .btn-trivago{padding:10px 20px;background:#fff;color:#0F6E56;border:1.5px solid #0F6E56;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .12s}
+    .btn-trivago:hover:not(:disabled){background:#0F6E56;color:#fff}
+    .btn-trivago:disabled{opacity:.3;cursor:default}
+    .tbl-wrap{background:#fff;border:1px solid #e4dce4;border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(106,52,96,.09)}
+    table{width:100%;border-collapse:collapse}
+    thead th{font-size:11px;font-weight:700;color:#6A3460;text-transform:uppercase;letter-spacing:.08em;padding:12px 14px;text-align:left;border-bottom:1.5px solid #e4dce4;background:#faf5fa;white-space:nowrap}
+    thead th.sort{cursor:pointer;user-select:none}
+    thead th.sort:hover{color:#55285a}
+    thead th.sort.on{color:#6A3460}
+    .si{margin-left:4px;opacity:.35;font-style:normal;font-size:11px}
+    thead th.sort.on .si{opacity:1}
+    tbody tr{border-bottom:1px solid #ede5ed;transition:background .1s}
+    tbody tr:last-child{border-bottom:none}
+    tbody tr:hover{background:#faf5fa}
+    tbody tr.sel{background:#f0e8f0}
+    td{padding:12px 14px;font-size:14px;color:#333;vertical-align:middle}
+    .bsky{display:inline-block;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;background:#e8f4f9;color:#1e6e90}
+    .bry{display:inline-block;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;background:#fff0e6;color:#b84800}
+    .both{display:inline-block;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;background:#f3edf3;color:#6A3460}
+    .pv{font-size:16px;font-weight:700}
+    .lp{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:20px;background:#f3edf3;color:#6A3460;font-size:14px;font-weight:700;border:1.5px solid #6A3460}
+    .dp{display:inline-block;font-size:12px;padding:2px 8px;border-radius:6px;background:#f3edf3;color:#6A3460;margin-left:6px;font-weight:700}
+    .lnk a{font-size:12px;color:#6A3460;text-decoration:none;font-weight:600;padding:4px 10px;border:1.5px solid #e4dce4;border-radius:20px;transition:all .12s;display:inline-block;white-space:nowrap}
+    .lnk a:hover{background:#6A3460;color:#fff;border-color:#6A3460}
+    input[type=checkbox]{width:16px;height:16px;accent-color:#6A3460;cursor:pointer}
+    .empty{text-align:center;padding:3rem;color:#bbb;font-size:15px}
+    .loading{text-align:center;padding:3rem;color:#bbb;font-size:15px}
+    .err{padding:1.5rem;color:#c0392b;font-size:14px;background:#fff5f5;border-radius:10px;margin:1rem;line-height:1.8}
+    .err code{background:#f0f0f0;padding:3px 8px;border-radius:4px;font-family:monospace;font-size:13px}
+    .hint{font-size:12px;color:#bbb;margin-top:.7rem;text-align:right}
+    .day-chk{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:1.5px solid #e4dce4;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;color:#888;transition:all .1s;user-select:none}
+    .day-chk:has(input:checked){background:#6A3460;border-color:#6A3460;color:#fff}
+    .day-chk input{display:none}
+    .field-lbl{display:block;font-size:11px;font-weight:700;color:#6A3460;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+    .field{width:100%;padding:7px 8px;border:1.5px solid #e4dce4;border-radius:8px;font-size:16px;font-weight:700;color:#6A3460;font-family:inherit;background:#fff;transition:border-color .15s}
+    .field:focus{outline:none;border-color:#6A3460}
+    .field::placeholder{color:#ccc;font-weight:400}
+    select.field{cursor:pointer;font-weight:600;color:#333}
+    .toast{position:fixed;bottom:28px;right:28px;background:#6A3460;color:#fff;padding:11px 22px;border-radius:20px;font-size:14px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none;z-index:999;box-shadow:0 4px 20px rgba(106,52,96,.4)}
+    .toast.show{opacity:1}
+    @media(max-width:700px){.g2,.g3{grid-template-columns:1fr}.header,.tabs-bar{padding-left:1rem;padding-right:1rem}.page{padding:1rem}}
+    .tv-price{font-weight:700;color:#0F6E56}
+    .tv-none{color:#bbb}
+    .agent-card{background:#fff;border:1px solid #e4dce4;border-radius:14px;padding:2rem;box-shadow:0 1px 4px rgba(106,52,96,.09);display:flex;flex-direction:column;gap:1rem;max-width:520px}
+    .agent-card h2{font-size:20px;font-weight:800;color:#6A3460;margin:0}
+    .agent-card p{font-size:14px;color:#888;margin:0;line-height:1.6}
+    .agent-launch-btn{padding:14px 28px;background:#6A3460;color:#fff;border:none;border-radius:24px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;align-self:flex-start;display:flex;align-items:center;gap:8px}
+    .agent-launch-btn:hover{background:#55285a}
+    .agent-steps{display:flex;flex-direction:column;gap:8px;padding:1rem 1.2rem;background:#faf5fa;border-radius:10px;border:1px solid #e4dce4}
+    .agent-step{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#666;line-height:1.5}
+    .agent-step-n{width:22px;height:22px;border-radius:50%;background:#6A3460;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+    .popup-status{display:none;align-items:center;gap:10px;padding:.8rem 1.1rem;background:#f0e8f0;border:1.5px solid #d4b8d0;border-radius:10px;font-size:13px;color:#6A3460;font-weight:600}
+    .popup-status.visible{display:flex}
+    .popup-dot{width:8px;height:8px;border-radius:50%;background:#6A3460;animation:blink 1.2s infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>✈️ Enrichment Agent · Curator</h1>
+    <div class="sub">Select deals and copy HTML snippets</div>
+  </div>
+  <div style="display:flex;gap:10px">
+    <a href="https://trivago-enrichment.netlify.app/manual" target="_blank" class="ibtn" style="text-decoration:none">❔ Help</a>
+    <button class="ibtn" onclick="reloadAll()">↺ Reload</button>
+  </div>
+</div>
+
+<div class="tabs-bar">
+  <button class="tab active" id="tab-btn-hotels" onclick="switchTab('hotels')">🏨 Hotels</button>
+  <button class="tab" id="tab-btn-agent" onclick="switchTab('agent')">⚙️ Run Agent</button>
+</div>
+
+<div class="page">
+
+  <!-- ══ HOTELS ══ -->
+  <div id="tab-hotels" class="tab-panel active">
+    <div class="disc">
+      <span style="font-size:18px;flex-shrink:0">ℹ️</span>
+      <span><strong>Prices extracted from Google Hotels</strong> — we use them as a reference to identify the cheapest dates. When you check the price on Trivago it may turn out to be even cheaper.</span>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">Market</div>
+      <div class="chips" id="h-market">
+        <div class="chip on" data-mkt="ES">🇪🇸 ES</div>
+        <div class="chip" data-mkt="DE">🇩🇪 DE</div>
+        <div class="chip" data-mkt="UK">🇬🇧 UK</div>
+        <div class="chip" data-mkt="FR">🇫🇷 FR</div>
+        <div class="chip" data-mkt="IT">🇮🇹 IT</div>
+        <div class="chip" data-mkt="NL">🇳🇱 NL</div>
+        <div class="chip" data-mkt="PL">🇵🇱 PL</div>
+        <div class="chip" data-mkt="CH">🇨🇭 CH</div>
+        <div class="chip" data-mkt="US">🇺🇸 US</div>
+        <div class="chip" data-mkt="AT">🇦🇹 AT</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">Hotel</div>
+      <div class="chips" id="h-hotel"><span style="color:#bbb">Loading...</span></div>
+    </div>
+
+    <div class="sec">
+      <div class="g3">
+        <div>
+          <div class="sec-t">Month</div>
+          <div class="chips" id="h-month"></div>
+        </div>
+        <div>
+          <div class="sec-t">Check-in day</div>
+          <div class="chips" id="h-dow"></div>
+        </div>
+        <div>
+          <div class="sec-t">Nights</div>
+          <div class="rng">
+            <div class="rng-lbl" id="hn-lbl">Any</div>
+            <div style="padding:0 4px;margin-top:4px">
+              <div class="rng-track"><div class="rng-fill" id="hn-fill"></div></div>
+              <div class="rng-inputs">
+                <input type="range" id="hn-min" min="1" max="15" value="1">
+                <input type="range" id="hn-max" min="1" max="15" value="15">
+              </div>
+            </div>
+            <div class="rng-ends"><span>1n</span><span>15n</span></div>
+            <div class="rng-ti">
+              <input type="number" id="hn-mini" min="1" max="15" value="1">
+              <span>to</span>
+              <input type="number" id="hn-maxi" min="1" max="15" value="15">
+              <span>nights</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">Max price per night</div>
+      <div class="rng">
+        <div class="rng-lbl" id="hp-lbl">No limit</div>
+        <div style="padding:0 4px;margin-top:4px">
+          <div class="rng-track"><div class="rng-fill" id="hp-fill"></div></div>
+          <div class="rng-single"><input type="range" id="hp-max" min="20" max="500" value="500" step="10"></div>
+        </div>
+        <div class="rng-ends"><span id="hp-min-lbl">20€</span><span id="hp-max-lbl">500€+</span></div>
+        <div class="rng-ti">
+          <span>Max</span>
+          <input type="number" id="hp-maxi" min="20" max="500" value="500" style="width:90px">
+          <span id="hp-currency-lbl">EUR</span>/night
+        </div>
+      </div>
+    </div>
+
+    <div class="res-bar" style="margin-top:1.4rem">
+      <div>
+        <span class="res-count" id="h-count">—</span>
+        <span class="res-sub" id="h-sub"></span>
+      </div>
+      <div class="btn-row">
+        <button class="btn-t20" onclick="hTop20()">☰ Top 20 cheapest</button>
+        <button class="btn-desel" id="h-desel" onclick="hDeselAll()" disabled>✕ Deselect all</button>
+        <button class="btn-copy" id="h-copy" onclick="hCopy()" disabled>↓ Copy selected</button>
+        <button class="btn-trivago" id="h-trivago" onclick="hCheckTrivago()" disabled>🔍 Check Trivago</button>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <div class="loading" id="h-loading">Loading hotels...</div>
+      <div id="h-err"></div>
+      <table id="h-tbl" style="display:none">
+        <thead>
+          <tr>
+            <th style="width:38px"></th>
+            <th class="sort" id="hth-dep" onclick="hSort('dep')">Check-in <i class="si" id="hsi-dep">↕</i></th>
+            <th>Check-out</th>
+            <th class="sort" id="hth-days" onclick="hSort('days')">Nights <i class="si" id="hsi-days">↕</i></th>
+            <th class="sort on" id="hth-price" onclick="hSort('price')">~Price/night <i class="si" id="hsi-price">↑</i></th>
+            <th class="sort" id="hth-total" onclick="hSort('total')">~Total <i class="si" id="hsi-total">↕</i></th>
+            <th class="sort" id="hth-trivago_night" onclick="hSort('trivago_night')">TV/night <i class="si" id="hsi-trivago_night">↕</i></th>
+            <th class="sort" id="hth-trivago_total" onclick="hSort('trivago_total')">TV Total <i class="si" id="hsi-trivago_total">↕</i></th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody id="h-tbody"></tbody>
+      </table>
+      <div class="empty" id="h-empty" style="display:none">No hotels match your filters</div>
+    </div>
+    <div class="hint" id="h-hint"></div>
+  </div>
+
+  <!-- ══ RUN AGENT ══ -->
+  <div id="tab-agent" class="tab-panel">
+    <div class="agent-card">
+      <h2>🏨 Hotel Enrichment Agent</h2>
+      <p>El agente usa un formulario guiado de dos pasos: escribe el nombre del hotel y n8n genera automáticamente el dropdown con las opciones disponibles.</p>
+      <div class="agent-steps">
+        <div class="agent-step"><div class="agent-step-n">1</div><span><strong>Escribe el nombre del hotel</strong> en el formulario — n8n buscará las opciones disponibles.</span></div>
+        <div class="agent-step"><div class="agent-step-n">2</div><span><strong>Selecciona el hotel</strong> en el dropdown que genera n8n y pulsa Submit.</span></div>
+        <div class="agent-step"><div class="agent-step-n">3</div><span><strong>Espera unos minutos</strong> — el agente corre en segundo plano y deposita los resultados en Google Sheets.</span></div>
+      </div>
+      <button class="agent-launch-btn" onclick="openAgentForm()">⚡ Abrir formulario del agente</button>
+      <div class="popup-status" id="popup-status">
+        <div class="popup-dot"></div>
+        Formulario abierto en nueva ventana
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── AGENT POPUP ───────────────────────────────────────────────────────
+const N8N_AGENT_URL = 'https://holidaypirates.app.n8n.cloud/form/692ccf15-ce69-4966-8218-2077f83502aa';
+let agentPopup = null;
+
+function openAgentForm(){
+  const w = 860, h = 760;
+  const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
+  const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
+  agentPopup = window.open(
+    N8N_AGENT_URL,
+    'n8n_agent',
+    `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`
+  );
+  const status = document.getElementById('popup-status');
+  if(agentPopup){
+    status.classList.add('visible');
+    const timer = setInterval(()=>{
+      if(agentPopup.closed){ status.classList.remove('visible'); clearInterval(timer); }
+    }, 800);
+  } else {
+    // Popup blocked — fallback to new tab
+    window.open(N8N_AGENT_URL, '_blank');
+  }
+}
+
+// ── CONFIG ───────────────────────────────────────────────────────────
+const SHEET_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8OMtbL9cSw1avh7m_j9eafiM11AkXkz4jVNnTUBpb2Pwi-tgcflBmvX0Ae8yvaC12uZKcf9qzJl7Q/pub?gid=';
+
+// Flights: one gid per market
+
+// Hotels (Trivago): one gid per market
+const HOTEL_GIDS = {
+  ES: '1378574669',
+  DE: '715724132',
+  UK: '1743212487',
+  FR: '1582570154',
+  IT: '1172119049',
+  NL: '1340210198',
+  PL: '349080011',
+  CH: '963954565',
+  US: '521948350',
+  AT: '1854292994',
+};
+
+const CURRENCY = {
+  ES:'€', DE:'€', FR:'€', IT:'€', NL:'€', AT:'€',
+  UK:'£', PL:'zł', CH:'CHF', US:'$'
+};
+
+function parsePrice(s){
+  const n=(s||'').replace(/[^\d.,]/g,'');
+  const clean=n.replace(/,(\d{3})(?=\d|$)/g,'$1').replace(',','.');
+  return parseFloat(clean)||0;
+}
+
+function sheetUrl(gid){ return `${SHEET_BASE}${gid}&single=true&output=csv`; }
+
+// ── SHARED ───────────────────────────────────────────────────────────
+const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DA = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const SORT_KEYS = {
+  price: ['price','dep','days'], dep: ['dep','price','days'],
+  days:  ['days','dep','price'], total: ['total','dep','days'],
+  trivago_night: ['trivago_night','dep','days'], trivago_total: ['trivago_total','dep','days']
+};
+
+
+const $ = id => document.getElementById(id);
+const dow  = d => new Date(d).getDay();
+const moKey= d => { const x=new Date(d); return`${MO[x.getMonth()]} ${String(x.getFullYear()).slice(2)}`; };
+const fmt  = s => { const d=new Date(s); return`${String(d.getDate()).padStart(2,'0')} ${MO[d.getMonth()].toLowerCase()}`; };
+const fmtD = s => DA[new Date(s).getDay()];
+const fmtS = s => { const d=new Date(s); return`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`; };
+
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+
+function parseCSV(text){
+  const lines=text.trim().split(/\r?\n/);
+  const hdr=lines[0].split(',').map(h=>h.replace(/^\uFEFF/,'').replace(/^"|"$/g,'').trim());
+  return lines.slice(1).map(line=>{
+    const cols=[];let cur='',q=false,i=0;
+    while(i<line.length){
+      const c=line[i];
+      if(c==='"'){
+        if(q&&line[i+1]==='"'){cur+='"';i+=2;continue;} // escaped quote ""
+        q=!q;
+      } else if(c===','&&!q){
+        cols.push(cur);cur='';
+      } else {
+        cur+=c;
+      }
+      i++;
+    }
+    cols.push(cur);
+    const o={};hdr.forEach((h,i)=>o[h]=(cols[i]||'').trim());
+    // Current sheet order: ... message, deepLink, htmlOutput.
+    // Keep position fallbacks because published CSV headers can occasionally drift.
+    if(!o.deepLink) o.deepLink=(cols[16]||'').trim();
+    if(!o.htmlOutput) o.htmlOutput=(cols[17]||'').trim();
+    return o;
+  });
+}
+
+async function fetchCSV(url){
+  const isExpectedCsv = text => {
+    const first=(text.replace(/^\uFEFF/,'').trimStart().split(/[\r\n]/,1)[0]||'').toLowerCase();
+    const cols=first.split(',').map(c=>c.replace(/^"|"$/g,'').trim());
+    return (cols.includes('partner')&&cols.includes('market')) ||
+           (cols.includes('entryid')&&cols.includes('market')&&cols.includes('checkin'));
+  };
+  // Try direct first (Google Sheets published CSVs allow CORS)
+  // Retry up to 4 times if Google returns a "Loading..." page
+  for(let attempt=1;attempt<=4;attempt++){
+    try{
+      const r=await fetch(url,{mode:'cors'});
+      if(r.ok){
+        const t=await r.text();
+        if(isExpectedCsv(t)) return t;
+        // Google returned a loading/redirect page — wait and retry
+        if(attempt<4) await new Promise(res=>setTimeout(res,600*attempt));
+      }
+    }catch{}
+  }
+  // Fallback to proxies
+  const proxies=[
+    u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+  ];
+  for(const proxy of proxies){
+    try{
+      const r=await fetch(proxy(url),{mode:'cors'});
+      if(!r.ok) continue;
+      const t=await r.text();
+      if(isExpectedCsv(t)) return t;
+    }catch{}
+  }
+  throw new Error('Could not fetch data');
+}
+
+function sortArr(arr,col,dir){
+  const keys=SORT_KEYS[col];
+  return[...arr].sort((a,b)=>{
+    for(let i=0;i<keys.length;i++){const k=keys[i],d=i===0?dir:1;if(a[k]<b[k])return-1*d;if(a[k]>b[k])return 1*d;}return 0;
+  });
+}
+
+function copyText(txt,n){
+  navigator.clipboard.writeText(txt)
+    .then(()=>toast(`✓ ${n} snippet${n>1?'s':''} copied`))
+    .catch(()=>{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('✓ Copied');});
+}
+
+function badge(p){
+  if(/skyscanner/i.test(p))return`<span class="bsky">Skyscanner</span>`;
+  if(/ryanair/i.test(p))return`<span class="bry">Ryanair</span>`;
+  return`<span class="both">${p}</span>`;
+}
+
+function extractLinkFromHtml(html){
+  const m=(html||'').match(/href=(["'])(.*?)\1/i);
+  return m?m[2]:'';
+}
+
+function extractLinkFromHtml(html){
+  if(!html) return '';
+  const m=(html||'').match(/href="([^"]+)"/);
+  return m?m[1]:'';
+}
+
+function getRowLink(r){
+  return (r.deepLink||extractLinkFromHtml(r.htmlOutput)||r.request_url||'').trim();
+}
+
+function hasPublishedDeepLinks(rows){
+  return rows.some(r=>r.deepLink||r.htmlOutput);
+}
+
+function buildHotelData(rows,mkt){
+  // Build trivago price lookup from ALL rows (not just hasPrice=TRUE)
+  const tvLookup={};
+  rows.forEach(r=>{
+    const k=(r.trivagoHotelId||r.googlePropertyToken||'')+'_'+r.checkIn;
+    if(parsePrice(r.trivago_price_per_night)>0) tvLookup[k]={
+      trivago_night:Math.round(parsePrice(r.trivago_price_per_night)),
+      trivago_total:Math.round(parsePrice(r.trivago_total_price))||null,
+    };
+  });
+  return rows
+    .filter(r=>r.checkIn&&r.hasPrice==='TRUE'&&parsePrice(r.google_price_per_night)>0)
+    .map(r=>{
+      const k=(r.trivagoHotelId||r.googlePropertyToken||'')+'_'+r.checkIn;
+      const tv=tvLookup[k]||{trivago_night:null,trivago_total:null};
+      const sym=CURRENCY[mkt]||'€';
+      const tvStr=tv.trivago_night?` - ${tv.trivago_night}${sym}`:'';
+      const link=getRowLink(r);
+      return{
+        name:r.trivagoHotelId||r.googlePropertyToken||'Unknown',
+        dep:r.checkIn,ret:r.checkOut||'',
+        days:parseInt(r.nights)||0,
+        price:Math.round(parsePrice(r.google_price_per_night)),
+        total:Math.round(parsePrice(r.google_total_price)),
+        link,
+        trivago_night:tv.trivago_night,trivago_total:tv.trivago_total,
+        snippet:link?`<p><strong>${fmtS(r.checkIn)} - ${fmtS(r.checkOut)}${tvStr}</strong> <a href="${link}" target="_blank" data-track-source="trivago_${mkt.toLowerCase()}_accommodations_affiliate"></a></p>`:''
+      };
+    });
+}
+
+// Single-select chips (market, origin, destination, hotel)
+function buildChips(id,vals,cur,labelFn,onchange){
+  const el=$(id);
+  const valid=vals.includes(cur)?cur:'';
+  el.innerHTML='<div class="chip'+(valid===''?' on':'')+'\" data-val="">All</div>'+
+    vals.map(v=>`<div class="chip${v===valid?' on':''}" data-val="${v}">${labelFn?labelFn(v):v}</div>`).join('');
+  el.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+    el.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on');onchange();
+  }));
+}
+
+// Multi-select chips (month, day of week) — clicking toggles; "All" deselects others
+function buildMultiChips(id,vals,labelFn,onchange){
+  const el=$(id);
+  el.innerHTML='<div class="mchip on" data-val="">All</div>'+
+    vals.map(v=>`<div class="mchip" data-val="${v}">${labelFn?labelFn(v):v}</div>`).join('');
+  el.querySelectorAll('.mchip').forEach(c=>c.addEventListener('click',()=>{
+    if(c.dataset.val===''){
+      // All selected — deselect everything else
+      el.querySelectorAll('.mchip').forEach(x=>x.classList.remove('on'));
+      c.classList.add('on');
+    } else {
+      // Toggle this chip
+      el.querySelector('.mchip[data-val=""]').classList.remove('on');
+      c.classList.toggle('on');
+      // If nothing selected, re-activate All
+      if(!el.querySelector('.mchip.on')) el.querySelector('.mchip[data-val=""]').classList.add('on');
+    }
+    onchange();
+  }));
+}
+
+// Get selected values from a multi-select chip group (empty array = All)
+function getMV(id){
+  const sel=[...$(id).querySelectorAll('.mchip.on')].map(c=>c.dataset.val).filter(v=>v!=='');
+  return sel;
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────
+function switchTab(t){
+  ['hotels','agent'].forEach(x=>{
+    $(`tab-${x}`).classList.toggle('active',x===t);
+    $(`tab-btn-${x}`).classList.toggle('active',x===t);
+  });
+  if(t==='agent') openAgentForm();
+}
+
+function reloadAll(){
+  hSel.clear();hUpdBtn();
+  hLoadedMarkets={};
+  loadHotelMarket(hCurrentMarket||'ES');
+}
+
+// ── FLIGHTS ───────────────────────────────────────────────────────────
+
+// ── HOTELS ────────────────────────────────────────────────────────────
+let HD=[],hFil=[],hSel=new Set(),hCol='price',hDir=1,hNn=1,hNx=15,hPx=500;
+let hCurrentMarket='ES',hLoadedMarkets={};
+
+$('h-market').querySelectorAll('.chip').forEach(c=>{
+  c.addEventListener('click',()=>{
+    $('h-market').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on');
+    loadHotelMarket(c.dataset.mkt);
+  });
+});
+
+async function loadHotelMarket(mkt){
+  hCurrentMarket=mkt;
+  hSel.clear();hUpdBtn();
+  // Reset filters on market switch
+  hNn=1;hNx=15;hPx=500;
+  if(hLoadedMarkets[mkt]){
+    HD=hLoadedMarkets[mkt];
+    hInitChips();hNRange();hPRange();hUpdSort(false);hRender();
+    return;
+  }
+  $('h-loading').style.display='block';
+  $('h-loading').textContent='⏳ Loading '+mkt+' hotels...';
+  $('h-tbl').style.display='none';
+  $('h-err').innerHTML='';
+  $('h-count').textContent='Loading...';
+  HD=[];
+  try{
+    const rows=parseCSV(await fetchCSV(sheetUrl(HOTEL_GIDS[mkt])));
+    const csvHasDeepLinks=hasPublishedDeepLinks(rows);
+    const data=buildHotelData(rows,mkt);
+    hLoadedMarkets[mkt]=data;
+    // Only render if user hasn't switched to another market while loading
+    if(hCurrentMarket!==mkt) return;
+    HD=data;
+    $('h-loading').style.display='none';
+    $('h-tbl').style.display='table';
+    $('h-hint').textContent=`Market: ${mkt} · ${HD.length} entries · ${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}${csvHasDeepLinks?'':' · Published CSV is missing deepLink/htmlOutput, using request_url fallback'}`;
+    hInitChips();hNRange();hPRange();hUpdSort(false);hRender();
+  }catch(e){
+    console.error('Could not load hotels for '+mkt,e);
+    $('h-loading').style.display='none';
+    $('h-err').innerHTML=`<div class="err">⚠️ <strong>Could not load hotels for ${mkt}.</strong><br>${e.message||'Check your internet connection and try reloading.'}</div>`;
+    $('h-count').textContent='Error';
+  }
+}
+
+function hInitChips(){
+  buildChips('h-hotel',[...new Set(HD.map(d=>d.name))].sort(),'',null,()=>hRender());
+  buildMultiChips('h-month',[...new Set(HD.map(d=>moKey(d.dep)))],null,()=>hRender());
+  buildMultiChips('h-dow',[...new Set(HD.map(d=>dow(d.dep)))].sort((a,b)=>a-b),v=>DA[v],()=>hRender());
+  if(!HD.length){
+    $('h-tbody').innerHTML='';
+    $('h-empty').style.display='block';
+    $('h-empty').textContent='No data available for this market';
+    $('h-count').textContent='0 dates';
+    $('h-tbl').style.display='none';
+  }
+}
+function hNRange(){
+  const p1=(hNn-1)/14*100,p2=(hNx-1)/14*100;
+  $('hn-fill').style.cssText=`left:${p1}%;width:${p2-p1}%`;
+  $('hn-lbl').textContent=(hNn===1&&hNx===15)?'Any':(hNn===hNx?`${hNn}n`:`${hNn}–${hNx}n`);
+  ['hn-min','hn-max','hn-mini','hn-maxi'].forEach((id,i)=>$(id).value=[hNn,hNx,hNn,hNx][i]);
+}
+function hPRange(){
+  const sym=CURRENCY[hCurrentMarket]||'€';
+  $('hp-fill').style.cssText=`left:0%;width:${(hPx-20)/480*100}%`;
+  $('hp-lbl').textContent=hPx>=500?'No limit':`Max ${hPx}${sym}/night`;
+  $('hp-max').value=hPx;$('hp-maxi').value=hPx;
+  $('hp-min-lbl').textContent=`20${sym}`;
+  $('hp-max-lbl').textContent=`500${sym}+`;
+  $('hp-currency-lbl').textContent=sym==='€'?'EUR':sym==='£'?'GBP':sym==='$'?'USD':sym==='CHF'?'CHF':sym==='zł'?'PLN':sym;
+}
+$('hn-min').oninput=function(){hNn=Math.min(+this.value,hNx);hNRange();hRender()};
+$('hn-max').oninput=function(){hNx=Math.max(+this.value,hNn);hNRange();hRender()};
+$('hn-mini').oninput=function(){hNn=Math.min(Math.max(1,+this.value||1),hNx);hNRange();hRender()};
+$('hn-maxi').oninput=function(){hNx=Math.max(Math.min(15,+this.value||15),hNn);hNRange();hRender()};
+$('hp-max').oninput=function(){hPx=+this.value;hPRange();hRender()};
+$('hp-maxi').oninput=function(){hPx=Math.min(500,Math.max(20,+this.value||500));hPRange();hRender()};
+
+function hSort(col){if(hCol===col)hDir=-hDir;else{hCol=col;hDir=1;}hUpdSort(true);}
+function hUpdSort(render){
+  ['price','dep','days','total','trivago_night','trivago_total'].forEach(c=>{
+    const th=$(`hth-${c}`),si=$(`hsi-${c}`);
+    if(th)th.classList.toggle('on',c===hCol);
+    if(si)si.textContent=c===hCol?(hDir===1?'↑':'↓'):'↕';
+  });
+  const lbl={price:'price/night',dep:'check-in',days:'nights',total:'total',trivago_night:'Trivago/night',trivago_total:'Trivago total'}[hCol]||hCol;
+  $('h-sub').textContent=`· sorted by ${lbl} ${hDir===1?'↑':'↓'}`;
+  if(render)hRender();
+}
+
+function hRender(){
+  if(!HD.length)return;
+  const sym=CURRENCY[hCurrentMarket]||'€';
+  const hotel=document.querySelector('#h-hotel .chip.on')?.dataset.val||'';
+  const months=getMV('h-month');
+  const days=getMV('h-dow');
+  const maxP=hPx>=500?Infinity:hPx;
+  hFil=sortArr(HD.filter(d=>{
+    if(hotel&&d.name!==hotel)return false;
+    if(months.length&&!months.includes(moKey(d.dep)))return false;
+    if(days.length&&!days.includes(String(dow(d.dep))))return false;
+    if(d.days<hNn||d.days>hNx)return false;
+    if(d.price>maxP)return false;
+    return true;
+  }),hCol,hDir);
+  hSel=new Set([...hSel].filter(i=>i<hFil.length));
+  $('h-count').textContent=`${hFil.length} date${hFil.length!==1?'s':''}`;
+  const empty=$('h-empty');
+  if(!hFil.length){$('h-tbody').innerHTML='';empty.style.display='block';hUpdBtn();return;}
+  empty.style.display='none';
+  const cheapestP=Math.min(...hFil.map(d=>d.price));
+  const cheapestT=Math.min(...hFil.map(d=>d.total));
+  $('h-tbody').innerHTML=hFil.map((d,i)=>{
+    const sel=hSel.has(i);
+    const total=d.total||d.price*d.days;
+    return`<tr class="${sel?'sel':''}" data-hi="${i}">
+      <td><input type="checkbox" ${sel?'checked':''} onchange="hTog(${i},this)"></td>
+      <td>${fmt(d.dep)}<span class="dp">${fmtD(d.dep)}</span></td>
+      <td>${fmt(d.ret)}<span class="dp">${fmtD(d.ret)}</span></td>
+      <td>${d.days}n</td>
+      <td>${d.price===cheapestP?`<span class="lp">🔥 ${d.price}${sym}</span>`:`<span class="pv">${d.price}${sym}</span>`}</td>
+      <td style="color:#888;font-weight:700">${total===cheapestT?`<span class="lp">🔥 ${total}${sym}</span>`:`${total}${sym}`}</td>
+      <td>${d.trivago_night?`<span class="tv-price">${d.trivago_night}${sym}</span>`:'<span class="tv-none">—</span>'}</td>
+      <td>${d.trivago_total?`<span class="tv-price">${d.trivago_total}${sym}</span>`:'<span class="tv-none">—</span>'}</td>
+      <td class="lnk">${d.link?`<a href="${d.link}" target="_blank">Check ↗</a>`:'<span style="color:#bbb;font-size:12px">—</span>'}</td>
+    </tr>`;
+  }).join('');
+  hUpdBtn();
+}
+function hTog(i,cb){
+  if(cb.checked)hSel.add(i);else hSel.delete(i);
+  document.querySelector(`#h-tbody tr[data-hi="${i}"]`).classList.toggle('sel',cb.checked);
+  hUpdBtn();
+}
+function hTop20(){
+  const ids=sortArr(hFil,'price',1).slice(0,20).map(d=>hFil.indexOf(d));
+  hSel=new Set(ids);hRender();toast(`Top ${hSel.size} cheapest selected`);
+}
+function hDeselAll(){hSel.clear();hRender();toast('All deselected')}
+function hUpdBtn(){
+  const n=hSel.size;
+  $('h-copy').disabled=n===0;$('h-desel').disabled=n===0;
+  $('h-copy').textContent=n?`↓ Copy ${n} snippet${n>1?'s':''}`:'↓ Copy selected';
+  $('h-trivago').disabled=n===0;
+  $('h-trivago').textContent=n?`🔍 Check Trivago (${n})`:'🔍 Check Trivago';
+}
+function hCopy(){copyText([...hSel].sort((a,b)=>a-b).map(i=>hFil[i].snippet).join('\n'),hSel.size)}
+
+function hCheckTrivago(){
+  const tasks=[...hSel].sort((a,b)=>a-b).map(i=>({
+    row:i+2,
+    market:hCurrentMarket,
+    entryId:hFil[i].name,
+    checkIn:hFil[i].dep,
+    checkOut:hFil[i].ret,
+    nights:hFil[i].days,
+    url:hFil[i].link
+  }));
+  if(!tasks.length) return;
+  navigator.clipboard.writeText(JSON.stringify(tasks))
+    .then(()=>toast(`📋 ${tasks.length} URL${tasks.length>1?'s':''} copiadas — pégalas en el extractor Trivago`))
+    .catch(()=>toast('❌ Error al copiar al portapapeles'));
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+loadHotelMarket('ES');
+
+
+</script>
+</body>
+</html>

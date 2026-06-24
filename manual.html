@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Enrichment Agent · Curator — User Manual</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --p:#6A3460;--bg:#f5f0f5;--card:#fff;--tx:#1a1a1a;--txs:#555;--txm:#999;
+      --bd:#e4dce4;--nav-bg:#fff;--code-bg:#f3edf3;--note-bg:#fdf8e8;--note-bd:#f0d060;--note-c:#7a6000;
+      --tag-bg:#f3edf3;--tag-c:#6A3460;--coming-bg:#f0e8f0;--coming-c:#6A3460;
+    }
+    [data-theme=dark]{
+      --bg:#0f0a0f;--card:#1a101a;--tx:#f0e8f0;--txs:#a89aa8;--txm:#6a4a6a;
+      --bd:#2a1a2a;--nav-bg:#1a101a;--code-bg:#2a1a2a;--note-bg:#1a1500;--note-bd:#5a4500;--note-c:#d4b040;
+      --tag-bg:#2a1a2a;--tag-c:#c084c0;--coming-bg:#2a1a2a;--coming-c:#c084c0;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--tx);line-height:1.7;transition:background .2s,color .2s}
+
+    /* ── HEADER ── */
+    .site-header{position:sticky;top:0;z-index:100;background:var(--p);padding:.85rem 2rem;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+    .site-header .brand{display:flex;align-items:center;gap:10px}
+    .site-header h1{font-size:15px;font-weight:800;color:#fff}
+    .site-header .sub{font-size:12px;color:rgba(255,255,255,.6);margin-top:1px}
+    .theme-btn{padding:6px 14px;background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.25);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+    .theme-btn:hover{background:rgba(255,255,255,.22)}
+
+    /* ── LAYOUT ── */
+    .layout{display:grid;grid-template-columns:240px 1fr;max-width:1100px;margin:0 auto;padding:2rem 1.5rem;gap:3rem;align-items:start}
+
+    /* ── SIDEBAR ── */
+    .sidebar{position:sticky;top:80px;max-height:calc(100vh - 100px);overflow-y:auto}
+    .sidebar nav{display:flex;flex-direction:column;gap:2px}
+    .sidebar .nav-section{font-size:10px;font-weight:700;color:var(--txm);text-transform:uppercase;letter-spacing:.1em;margin:14px 0 4px;padding-left:8px}
+    .sidebar a{font-size:13px;color:var(--txs);text-decoration:none;padding:5px 8px;border-radius:6px;transition:all .1s;display:block}
+    .sidebar a:hover{background:var(--tag-bg);color:var(--p)}
+    .sidebar a.active{background:var(--tag-bg);color:var(--p);font-weight:700}
+
+    /* ── CONTENT ── */
+    .content{min-width:0}
+    .content section{margin-bottom:4rem}
+    .section-num{font-size:11px;font-weight:700;color:var(--p);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem}
+    h2{font-size:26px;font-weight:800;color:var(--tx);margin-bottom:1rem;line-height:1.25}
+    h3{font-size:18px;font-weight:700;color:var(--tx);margin:1.75rem 0 .6rem}
+    h4{font-size:15px;font-weight:700;color:var(--txs);margin:1.25rem 0 .4rem}
+    p{font-size:15px;color:var(--txs);margin-bottom:.9rem}
+    ul,ol{padding-left:1.4rem;margin-bottom:.9rem}
+    li{font-size:15px;color:var(--txs);margin-bottom:.35rem}
+    li strong{color:var(--tx)}
+    strong{color:var(--tx)}
+    code{background:var(--code-bg);color:var(--p);padding:2px 7px;border-radius:5px;font-family:'Courier New',monospace;font-size:13px}
+    hr{border:none;border-top:1px solid var(--bd);margin:2.5rem 0}
+
+    /* ── HERO ── */
+    .hero{text-align:center;padding:3rem 0 2rem}
+    .hero .icon{font-size:52px;margin-bottom:1rem}
+    .hero h2{font-size:32px;font-weight:800;color:var(--tx);margin-bottom:.5rem}
+    .hero h2 em{color:var(--p);font-style:normal}
+    .hero p{font-size:16px;color:var(--txs);max-width:520px;margin:0 auto}
+
+    /* ── NOTE / CALLOUT ── */
+    .note{background:var(--note-bg);border:1.5px solid var(--note-bd);border-radius:10px;padding:.9rem 1.1rem;margin:1rem 0;font-size:14px;color:var(--note-c);line-height:1.6}
+    .note strong{color:var(--note-c)}
+    .coming{background:var(--coming-bg);border:1.5px solid var(--bd);border-radius:10px;padding:.9rem 1.1rem;margin:1rem 0;font-size:14px;color:var(--coming-c);line-height:1.6}
+
+    /* ── TABLE ── */
+    .tbl-wrap{overflow-x:auto;margin:1rem 0}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    thead th{background:var(--tag-bg);color:var(--p);font-weight:700;padding:9px 12px;text-align:left;border-bottom:2px solid var(--bd)}
+    tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);color:var(--txs);vertical-align:top}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:var(--tag-bg)}
+
+    /* ── STEP ── */
+    .steps{counter-reset:step;display:flex;flex-direction:column;gap:.75rem;margin:1rem 0}
+    .step{display:flex;gap:14px;align-items:flex-start}
+    .step-n{counter-increment:step;width:28px;height:28px;border-radius:50%;background:var(--p);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+    .step-n::before{content:counter(step)}
+    .step-body{font-size:15px;color:var(--txs);line-height:1.6;flex:1}
+    .step-body strong{color:var(--tx)}
+
+    /* ── TAG ── */
+    .tag{display:inline-block;background:var(--tag-bg);color:var(--tag-c);padding:2px 10px;border-radius:20px;font-size:12px;font-weight:700;margin:0 2px}
+
+    /* ── CHIP PREVIEW ── */
+    .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:.75rem 0}
+    .chip-demo{padding:5px 14px;border-radius:20px;font-size:14px;font-weight:600;border:1.5px solid var(--bd);background:var(--card);color:var(--txs)}
+    .chip-demo.on{background:var(--p);border-color:var(--p);color:#fff}
+
+    /* ── MOBILE ── */
+    @media(max-width:768px){
+      .layout{grid-template-columns:1fr;padding:1rem}
+      .sidebar{display:none}
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">
+    <div>
+      <h1>✈️ Enrichment Agent · Curator</h1>
+      <div class="sub">User Manual</div>
+    </div>
+  </div>
+  <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <nav id="sidenav">
+      <div class="nav-section">Getting started</div>
+      <a href="#intro">Introduction</a>
+      <a href="#quickstart">Quick start</a>
+      <a href="#interface">Interface</a>
+
+      <div class="nav-section">Flights</div>
+      <a href="#flights-market">Market selection</a>
+      <a href="#flights-filters">Filters</a>
+      <a href="#flights-table">Results table</a>
+      <a href="#flights-copy">Copying to Contentful</a>
+
+      <div class="nav-section">Hotels</div>
+      <a href="#hotels-market">Market selection</a>
+      <a href="#hotels-filters">Filters</a>
+      <a href="#hotels-table">Results table</a>
+
+      <div class="nav-section">Reference</div>
+      <a href="#workflow">Workflow tips</a>
+      <a href="#upcoming">Upcoming features</a>
+    </nav>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="icon">✈️  🏨</div>
+      <h2>Enrichment Agent · <em>Curator</em></h2>
+      <p>Find the best flight and hotel deals, select them, and copy HTML snippets straight into Contentful.</p>
+    </div>
+
+    <hr>
+
+    <!-- INTRO -->
+    <section id="intro">
+      <div class="section-num">01 · Introduction</div>
+      <h2>What is the Curator?</h2>
+      <p>The <strong>Enrichment Agent Curator</strong> is an internal tool for the HolidayPirates editorial team. It connects directly to Google Sheets where the enrichment agent deposits flight and hotel data, and lets you filter, sort, select and copy HTML snippets ready to paste into Contentful.</p>
+      <p>In one sentence: <strong>you find the best deal, check the price, and copy the snippet — all in one place.</strong></p>
+
+      <h3>What you can do</h3>
+      <ul>
+        <li><strong>Flights:</strong> filter by market, origin, destination, month, day, nights and price. Select deals and copy their HTML snippets into Contentful.</li>
+        <li><strong>Hotels:</strong> filter hotel dates by market, hotel name, month, day, nights and price per night. Check prices via Trivago. Copying snippets to Contentful is coming soon.</li>
+      </ul>
+
+      <p>The tool lives at <a href="https://enrichment-agents.netlify.app/" target="_blank" style="color:var(--p);font-weight:700">enrichment-agents.netlify.app</a> — open it directly in your browser, no setup needed.</p>
+      <div class="note">ℹ️ The tool connects to Google Sheets automatically on load. If data doesn't appear, check your internet connection and try the <strong>↺ Reload</strong> button.</div>
+    </section>
+
+    <hr>
+
+    <!-- QUICK START -->
+    <section id="quickstart">
+      <div class="section-num">02 · Quick start</div>
+      <h2>Your first selection in 60 seconds</h2>
+      <p>If you only read one section, read this one.</p>
+
+      <div class="steps">
+        <div class="step"><div class="step-n"></div><div class="step-body"><strong>Open the tool</strong> — go to <a href="https://enrichment-agents.netlify.app/" target="_blank" style="color:var(--p);font-weight:700">enrichment-agents.netlify.app</a>. Flights for the ES market load automatically.</div></div>
+        <div class="step"><div class="step-n"></div><div class="step-body"><strong>Pick your market</strong> — click a market chip (🇪🇸 ES, 🇩🇪 DE, 🇬🇧 UK…). The table reloads with that market's data.</div></div>
+        <div class="step"><div class="step-n"></div><div class="step-body"><strong>Apply filters</strong> — narrow down by origin, destination, month, day of week, nights or price. Filters update the results instantly.</div></div>
+        <div class="step"><div class="step-n"></div><div class="step-body"><strong>Select deals</strong> — check the boxes on the rows you want, or click <strong>☰ Top 20 cheapest</strong> to auto-select the best ones.</div></div>
+        <div class="step"><div class="step-n"></div><div class="step-body"><strong>Copy snippets</strong> — click <strong>↓ Copy selected</strong>. All HTML snippets are copied to your clipboard, one after another.</div></div>
+        <div class="step"><div class="step-n"></div><div class="step-body"><strong>Paste into Contentful</strong> — paste directly. Done.</div></div>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- INTERFACE -->
+    <section id="interface">
+      <div class="section-num">03 · Interface</div>
+      <h2>Interface overview</h2>
+      <p>The tool has two main tabs:</p>
+      <div class="chip-row">
+        <span class="chip-demo on">✈️ Flights</span>
+        <span class="chip-demo">🏨 Hotels</span>
+      </div>
+      <p>Both tabs share a consistent layout:</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Section</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Market chips</strong></td><td>Select which market to load. In Flights, greyed-out chips have no data yet.</td></tr>
+            <tr><td><strong>Filters</strong></td><td>Origin / Destination (Flights), Hotel name (Hotels), Month, Day of week, Nights range, Max price.</td></tr>
+            <tr><td><strong>Results bar</strong></td><td>Shows the count of matching results and the current sort order.</td></tr>
+            <tr><td><strong>Action buttons</strong></td><td>Top 20 cheapest · Deselect all · Copy selected snippets.</td></tr>
+            <tr><td><strong>Results table</strong></td><td>Sortable columns. Click a column header to sort; click again to reverse order.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- FLIGHTS: MARKET -->
+    <section id="flights-market">
+      <div class="section-num">04 · Flights</div>
+      <h2>Flights — Market selection</h2>
+      <p>Click a market chip to load flights for that market. Data is cached per session — switching between markets and back does not reload until you hit <strong>↺ Reload</strong>.</p>
+      <div class="chip-row">
+        <span class="chip-demo on">🇪🇸 ES</span>
+        <span class="chip-demo">🇩🇪 DE</span>
+        <span class="chip-demo">🇫🇷 FR</span>
+        <span class="chip-demo">🇮🇹 IT</span>
+        <span class="chip-demo">🇬🇧 UK</span>
+        <span class="chip-demo" style="opacity:.4">🇳🇱 NL</span>
+        <span class="chip-demo" style="opacity:.4">🇵🇱 PL</span>
+        <span class="chip-demo" style="opacity:.4">🇨🇭 CH</span>
+        <span class="chip-demo" style="opacity:.4">🇺🇸 US</span>
+        <span class="chip-demo" style="opacity:.4">🇦🇹 AT</span>
+      </div>
+      <p>Markets shown in grey (NL, PL, CH, US, AT) have not been connected yet and will be activated as flight data becomes available.</p>
+    </section>
+
+    <hr>
+
+    <!-- FLIGHTS: FILTERS -->
+    <section id="flights-filters">
+      <h2>Flights — Filters</h2>
+
+      <h3>Origin &amp; Destination</h3>
+      <p>These two chip groups are <strong>dynamic</strong>: selecting an origin shows only the destinations available from that origin, and vice versa. Select <span class="tag">All</span> to reset.</p>
+
+      <h3>Departure month &amp; Departure day</h3>
+      <p>Both support <strong>multi-selection</strong> — click individual chips to toggle them on or off. Clicking <span class="tag">All</span> deselects everything else. Useful for comparing weekends across two months, for example.</p>
+
+      <h3>Nights</h3>
+      <p>Double-handle slider. Drag the left handle to set the minimum and the right handle to set the maximum. You can also type values directly in the number inputs — both controls stay in sync.</p>
+
+      <h3>Max price (round trip)</h3>
+      <p>Single-handle slider. Drag left to lower the maximum price. Shows <em>No limit</em> at the far right. You can also type in the input field.</p>
+    </section>
+
+    <hr>
+
+    <!-- FLIGHTS: TABLE -->
+    <section id="flights-table">
+      <h2>Flights — Results table</h2>
+      <p>Results are sorted by price ascending by default. Click any sortable column header to change the sort:</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Column</th><th>Primary sort</th><th>Tiebreaker order</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Departure</strong></td><td>Date</td><td>Price → Nights</td></tr>
+            <tr><td><strong>Nights</strong></td><td>Nights</td><td>Date → Price</td></tr>
+            <tr><td><strong>Price</strong></td><td>Price</td><td>Date → Nights</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Click the same column again to reverse the sort order (↑ ascending / ↓ descending).</p>
+
+      <h3>🔥 Flame badge</h3>
+      <p>Appears on the cheapest flight in the current filtered results that is also flagged as a minimum price in the source data. Use it as a quick signal for the most attractive deal.</p>
+
+      <h3>Check ↗ link</h3>
+      <p>Opens the flight directly on Skyscanner or the partner site so you can verify the current price before publishing. Always check before committing to a deal.</p>
+
+      <div class="note">ℹ️ <strong>Prices sourced from Google Flights.</strong> Fares are indicative and may differ slightly on Skyscanner or Kayak due to real-time availability. Always verify via the Check ↗ link before publishing.</div>
+    </section>
+
+    <hr>
+
+    <!-- FLIGHTS: COPY -->
+    <section id="flights-copy">
+      <h2>Flights — Copying snippets to Contentful</h2>
+      <p>Once you've filtered and found the deals you want:</p>
+      <div class="steps">
+        <div class="step"><div class="step-n"></div><div class="step-body">Check the box on each row you want to include. Selected rows highlight in purple.</div></div>
+        <div class="step"><div class="step-n"></div><div class="step-body">Or click <strong>☰ Top 20 cheapest</strong> to automatically select the 20 cheapest flights in the current filtered set.</div></div>
+        <div class="step"><div class="step-n"></div><div class="step-body">Click <strong>↓ Copy N snippets</strong>. All HTML snippets are copied to your clipboard, one after another, in the current sort order.</div></div>
+        <div class="step"><div class="step-n"></div><div class="step-body">Paste directly into Contentful.</div></div>
+      </div>
+      <p>To clear your selection, click <strong>✕ Deselect all</strong>.</p>
+    </section>
+
+    <hr>
+
+    <!-- HOTELS: MARKET -->
+    <section id="hotels-market">
+      <div class="section-num">05 · Hotels</div>
+      <h2>Hotels — Market selection</h2>
+      <p>All 10 markets are available for hotels. Click a chip to load that market's hotel data. ES loads automatically when you open the Hotels tab.</p>
+      <div class="chip-row">
+        <span class="chip-demo on">🇪🇸 ES</span>
+        <span class="chip-demo">🇩🇪 DE</span>
+        <span class="chip-demo">🇬🇧 UK</span>
+        <span class="chip-demo">🇫🇷 FR</span>
+        <span class="chip-demo">🇮🇹 IT</span>
+        <span class="chip-demo">🇳🇱 NL</span>
+        <span class="chip-demo">🇵🇱 PL</span>
+        <span class="chip-demo">🇨🇭 CH</span>
+        <span class="chip-demo">🇺🇸 US</span>
+        <span class="chip-demo">🇦🇹 AT</span>
+      </div>
+      <p>Data is cached per market during the session. Switching markets and switching back does not make a new request until you reload.</p>
+      <div class="note">ℹ️ <strong>Prices extracted from Google Hotels</strong> — used as a reference to identify the cheapest check-in dates. When you check the price on Trivago it may turn out to be even cheaper.</div>
+    </section>
+
+    <hr>
+
+    <!-- HOTELS: FILTERS -->
+    <section id="hotels-filters">
+      <h2>Hotels — Filters</h2>
+
+      <h3>Hotel</h3>
+      <p>Select a specific hotel from the chips to see only its dates. Select <span class="tag">All</span> to show dates across all hotels in the market.</p>
+
+      <h3>Month &amp; Check-in day</h3>
+      <p>Both support multi-selection, same as in the Flights tab. Toggle individual chips on/off; <span class="tag">All</span> resets the filter.</p>
+
+      <h3>Nights</h3>
+      <p>Double-handle slider with number inputs, same as Flights.</p>
+
+      <h3>Max price per night</h3>
+      <p>Single-handle slider. The filter applies to the <strong>per-night</strong> price, not the total stay.</p>
+    </section>
+
+    <hr>
+
+    <!-- HOTELS: TABLE -->
+    <section id="hotels-table">
+      <h2>Hotels — Results table</h2>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Column</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Check-in</strong></td><td>Arrival date with day of week pill.</td></tr>
+            <tr><td><strong>Check-out</strong></td><td>Departure date with day of week pill.</td></tr>
+            <tr><td><strong>Nights</strong></td><td>Length of stay.</td></tr>
+            <tr><td><strong>~Price/night</strong></td><td>Approximate price per night from Google Hotels. The ~ indicates it's a reference price.</td></tr>
+            <tr><td><strong>~Total</strong></td><td>Approximate total stay price (price/night × nights).</td></tr>
+            <tr><td><strong>Link</strong></td><td>Check ↗ opens the booking on Trivago to verify the current price.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>🔥 Flame badge</h3>
+      <p>Appears independently on two cells: the cheapest price/night and the cheapest total in the current filtered results. Both are highlighted separately, so the cheapest per-night date and the cheapest total stay may be different rows.</p>
+
+      <h3>Sorting</h3>
+      <p>You can sort by Check-in, Nights, ~Price/night or ~Total. Click a column header to sort; click again to reverse.</p>
+
+      <h3>Copying hotel snippets</h3>
+      <div class="coming">🔜 <strong>Coming soon.</strong> Copying HTML snippets for hotel deals into Contentful is not yet available. In the meantime, use the <strong>Check ↗</strong> link to verify prices on Trivago before manually creating the content.</div>
+    </section>
+
+    <hr>
+
+    <!-- WORKFLOW -->
+    <section id="workflow">
+      <div class="section-num">06 · Reference</div>
+      <h2>Workflow tips</h2>
+
+      <h3>Recommended flight workflow</h3>
+      <ol>
+        <li>Select the market you're working on.</li>
+        <li>Filter by destination (or origin if relevant).</li>
+        <li>Apply month and day-of-week filters to match your editorial calendar.</li>
+        <li>Click <strong>☰ Top 20 cheapest</strong> to pre-select the best deals.</li>
+        <li>Review and adjust the selection manually if needed.</li>
+        <li>Click <strong>↓ Copy selected</strong> and paste into Contentful.</li>
+      </ol>
+
+      <h3>Multi-select filters</h3>
+      <p>Month and day chips support multiple selection. Useful for comparing weekends across two months: select <span class="tag on" style="background:var(--p);color:#fff">Sat</span> <span class="tag on" style="background:var(--p);color:#fff">Sun</span> and <span class="tag on" style="background:var(--p);color:#fff">Jun 26</span> <span class="tag on" style="background:var(--p);color:#fff">Jul 26</span> simultaneously.</p>
+
+      <h3>Reload &amp; cache</h3>
+      <p>Data is cached per market during the session. If the Google Sheet has been updated since you opened the tool, click the <strong>↺ Reload</strong> button (top right) to refresh all data for both tabs.</p>
+
+      <h3>Verifying prices</h3>
+      <ul>
+        <li><strong>Flights:</strong> prices are round-trip fares from Google Flights. May vary slightly on Skyscanner or Kayak.</li>
+        <li><strong>Hotels:</strong> prices are per-night approximations from Google Hotels. The actual Trivago price may be lower.</li>
+        <li>Always verify via the <strong>Check ↗</strong> link before publishing.</li>
+      </ul>
+
+      <h3>Dynamic origin / destination chips</h3>
+      <p>When you select an origin, the destination chips automatically update to show only the airports that have flights from that origin — and vice versa. This prevents empty result sets and makes it faster to navigate to a specific route.</p>
+    </section>
+
+    <hr>
+
+    <!-- UPCOMING -->
+    <section id="upcoming">
+      <h2>Upcoming features</h2>
+      <ul>
+        <li><strong>Hotel snippets for Contentful:</strong> copy HTML snippets for hotel deals — same workflow as flights.</li>
+        <li><strong>More markets for flights:</strong> NL, PL, CH, US, AT flight data will be connected as enrichment is activated for those markets.</li>
+        <li><strong>Outlet tab:</strong> a historical archive of the cheapest deals found over time, for outlet-style content.</li>
+      </ul>
+      <div style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--bd);font-size:13px;color:var(--txm);text-align:center">
+        Enrichment Agent Curator · HolidayPirates Group · Internal tool
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// ── THEME ─────────────────────────────────────────────────────────────
+const saved = localStorage.getItem('curator-manual-theme');
+if(saved) document.documentElement.setAttribute('data-theme', saved);
+function toggleTheme(){
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+  localStorage.setItem('curator-manual-theme', dark ? 'light' : 'dark');
+  document.getElementById('theme-btn').textContent = dark ? '🌙 Dark' : '☀️ Light';
+}
+if(saved === 'dark') document.getElementById('theme-btn').textContent = '☀️ Light';
+
+// ── ACTIVE NAV ────────────────────────────────────────────────────────
+const sections = document.querySelectorAll('section[id]');
+const navLinks  = document.querySelectorAll('.sidebar a');
+const observer  = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting){
+      navLinks.forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`.sidebar a[href="#${e.target.id}"]`);
+      if(link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

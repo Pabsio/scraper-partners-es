@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Enrichment Agent · Curator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Open Sans',sans-serif;background:#f5f0f5;color:#333;min-height:100vh}
+    .header{background:#6A3460;padding:1.1rem 2rem;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+    .header h1{font-size:17px;font-weight:800;color:#fff}
+    .header .sub{font-size:13px;color:rgba(255,255,255,.65);margin-top:3px}
+    .ibtn{padding:7px 16px;background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.25);border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+    .ibtn:hover{background:rgba(255,255,255,.22)}
+    .tabs-bar{background:#6A3460;padding:0 2rem;display:flex;gap:4px;align-items:flex-end}
+    .tab{padding:10px 24px 11px;font-size:15px;font-weight:700;cursor:pointer;border-radius:10px 10px 0 0;color:rgba(255,255,255,.6);background:transparent;border:none;font-family:inherit;transition:all .15s}
+    .tab:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.08)}
+    .tab.active{background:#f5f0f5;color:#6A3460}
+    .page{padding:1.5rem 2rem;max-width:1060px;margin:0 auto}
+    .tab-panel{display:none}.tab-panel.active{display:block}
+    .disc{background:#fdf8e8;border:1.5px solid #f0d060;border-radius:12px;padding:1rem 1.4rem;margin-bottom:1rem;display:flex;gap:10px;font-size:14px;color:#7a6000;line-height:1.55}
+    .sec{background:#fff;border:1px solid #e4dce4;border-radius:14px;padding:1.3rem 1.7rem;margin-bottom:.9rem;box-shadow:0 1px 4px rgba(106,52,96,.09)}
+    .sec-t{font-size:12px;font-weight:700;color:#6A3460;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.9rem}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    /* single-select chip */
+    .chip{padding:8px 20px;border-radius:20px;font-size:16px;font-weight:600;cursor:pointer;border:1.5px solid #e4dce4;background:#fff;color:#888;transition:all .1s;user-select:none;font-family:inherit}
+    .chip:hover{border-color:#6A3460;color:#6A3460}
+    .chip.on{background:#6A3460;border-color:#6A3460;color:#fff}
+    .chip.disabled{opacity:.4;cursor:default;pointer-events:none}
+    /* multi-select chip — same visual but togglable */
+    .mchip{padding:8px 20px;border-radius:20px;font-size:16px;font-weight:600;cursor:pointer;border:1.5px solid #e4dce4;background:#fff;color:#888;transition:all .1s;user-select:none;font-family:inherit}
+    .mchip:hover{border-color:#6A3460;color:#6A3460}
+    .mchip.on{background:#6A3460;border-color:#6A3460;color:#fff}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+    .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2rem;align-items:start}
+    .rng{display:flex;flex-direction:column;gap:6px}
+    .rng-lbl{font-size:16px;font-weight:700;color:#6A3460}
+    .rng-track{position:relative;height:5px;background:#e4dce4;border-radius:99px;margin:10px 4px}
+    .rng-fill{position:absolute;height:5px;background:#6A3460;border-radius:99px}
+    .rng-inputs{position:relative;height:0}
+    .rng-inputs input[type=range]{position:absolute;width:100%;top:-11px;appearance:none;background:transparent;pointer-events:none}
+    .rng-inputs input[type=range]::-webkit-slider-thumb{appearance:none;width:20px;height:20px;border-radius:50%;background:#6A3460;border:2px solid #fff;box-shadow:0 0 0 2px #6A3460;pointer-events:all;cursor:pointer}
+    .rng-ends{display:flex;justify-content:space-between;font-size:13px;color:#bbb;margin-top:12px}
+    .rng-ti{display:flex;align-items:center;gap:8px;margin-top:10px}
+    .rng-ti input[type=number]{width:72px;padding:7px 8px;border:1.5px solid #e4dce4;border-radius:8px;font-size:16px;font-weight:700;color:#6A3460;text-align:center;font-family:inherit;background:#fff}
+    .rng-ti input[type=number]:focus{outline:none;border-color:#6A3460}
+    .rng-ti span{font-size:15px;color:#bbb}
+    .rng-single input[type=range]{width:100%;appearance:none;background:transparent;display:block;margin-top:6px}
+    .rng-single input[type=range]::-webkit-slider-thumb{appearance:none;width:20px;height:20px;border-radius:50%;background:#6A3460;border:2px solid #fff;box-shadow:0 0 0 2px #6A3460;cursor:pointer}
+    .res-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;flex-wrap:wrap;gap:10px}
+    .res-count{font-size:18px;font-weight:800;color:#6A3460}
+    .res-sub{font-size:13px;color:#bbb;margin-left:6px}
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap}
+    .btn-t20{padding:10px 20px;background:#fff;color:#6A3460;border:1.5px solid #6A3460;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .12s}
+    .btn-t20:hover{background:#6A3460;color:#fff}
+    .btn-desel{padding:10px 20px;background:#fff;color:#888;border:1.5px solid #e4dce4;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .12s}
+    .btn-desel:hover{border-color:#6A3460;color:#6A3460}
+    .btn-desel:disabled,.btn-copy:disabled{opacity:.3;cursor:default}
+    .btn-copy{padding:10px 22px;background:#6A3460;color:#fff;border:none;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .12s}
+    .btn-copy:hover:not(:disabled){background:#55285a}
+    .tbl-wrap{background:#fff;border:1px solid #e4dce4;border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(106,52,96,.09)}
+    table{width:100%;border-collapse:collapse}
+    thead th{font-size:11px;font-weight:700;color:#6A3460;text-transform:uppercase;letter-spacing:.08em;padding:12px 14px;text-align:left;border-bottom:1.5px solid #e4dce4;background:#faf5fa;white-space:nowrap}
+    thead th.sort{cursor:pointer;user-select:none}
+    thead th.sort:hover{color:#55285a}
+    thead th.sort.on{color:#6A3460}
+    .si{margin-left:4px;opacity:.35;font-style:normal;font-size:11px}
+    thead th.sort.on .si{opacity:1}
+    tbody tr{border-bottom:1px solid #ede5ed;transition:background .1s}
+    tbody tr:last-child{border-bottom:none}
+    tbody tr:hover{background:#faf5fa}
+    tbody tr.sel{background:#f0e8f0}
+    td{padding:12px 14px;font-size:14px;color:#333;vertical-align:middle}
+    .bsky{display:inline-block;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;background:#e8f4f9;color:#1e6e90}
+    .bry{display:inline-block;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;background:#fff0e6;color:#b84800}
+    .both{display:inline-block;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;background:#f3edf3;color:#6A3460}
+    .pv{font-size:16px;font-weight:700}
+    .lp{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:20px;background:#f3edf3;color:#6A3460;font-size:14px;font-weight:700;border:1.5px solid #6A3460}
+    .dp{display:inline-block;font-size:12px;padding:2px 8px;border-radius:6px;background:#f3edf3;color:#6A3460;margin-left:6px;font-weight:700}
+    .lnk a{font-size:12px;color:#6A3460;text-decoration:none;font-weight:600;padding:4px 10px;border:1.5px solid #e4dce4;border-radius:20px;transition:all .12s;display:inline-block;white-space:nowrap}
+    .lnk a:hover{background:#6A3460;color:#fff;border-color:#6A3460}
+    input[type=checkbox]{width:16px;height:16px;accent-color:#6A3460;cursor:pointer}
+    .empty{text-align:center;padding:3rem;color:#bbb;font-size:15px}
+    .loading{text-align:center;padding:3rem;color:#bbb;font-size:15px}
+    .err{padding:1.5rem;color:#c0392b;font-size:14px;background:#fff5f5;border-radius:10px;margin:1rem;line-height:1.8}
+    .err code{background:#f0f0f0;padding:3px 8px;border-radius:4px;font-family:monospace;font-size:13px}
+    .hint{font-size:12px;color:#bbb;margin-top:.7rem;text-align:right}
+    .day-chk{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:1.5px solid #e4dce4;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;color:#888;transition:all .1s;user-select:none}
+    .day-chk:has(input:checked){background:#6A3460;border-color:#6A3460;color:#fff}
+    .day-chk input{display:none}
+    .field-lbl{display:block;font-size:11px;font-weight:700;color:#6A3460;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+    .field{width:100%;padding:7px 8px;border:1.5px solid #e4dce4;border-radius:8px;font-size:16px;font-weight:700;color:#6A3460;font-family:inherit;background:#fff;transition:border-color .15s}
+    .field:focus{outline:none;border-color:#6A3460}
+    .field::placeholder{color:#ccc;font-weight:400}
+    select.field{cursor:pointer;font-weight:600;color:#333}
+    .toast{position:fixed;bottom:28px;right:28px;background:#6A3460;color:#fff;padding:11px 22px;border-radius:20px;font-size:14px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none;z-index:999;box-shadow:0 4px 20px rgba(106,52,96,.4)}
+    .toast.show{opacity:1}
+    @media(max-width:700px){.g2,.g3{grid-template-columns:1fr}.header,.tabs-bar{padding-left:1rem;padding-right:1rem}.page{padding:1rem}}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>✈️ Enrichment Agent · Curator</h1>
+    <div class="sub">Select deals and copy HTML snippets</div>
+  </div>
+  <div style="display:flex;gap:10px">
+    <a href="https://enrichment-agents.netlify.app/manual" target="_blank" class="ibtn" style="text-decoration:none">❔ Help</a>
+    <button class="ibtn" onclick="reloadAll()">↺ Reload</button>
+  </div>
+</div>
+
+<div class="tabs-bar">
+  <button class="tab active" id="tab-btn-flights" onclick="switchTab('flights')">✈️ Flights</button>
+  <button class="tab" id="tab-btn-hotels" onclick="switchTab('hotels')">🏨 Hotels</button>
+  <button class="tab" id="tab-btn-agent" onclick="switchTab('agent')">⚙️ Run Agent</button>
+</div>
+
+<div class="page">
+
+  <!-- ══ FLIGHTS ══ -->
+  <div id="tab-flights" class="tab-panel active">
+    <div class="disc">
+      <span style="font-size:18px;flex-shrink:0">ℹ️</span>
+      <span><strong>Prices sourced from Google Flights.</strong> Fares are indicative and may differ slightly on Skyscanner or Kayak. Always verify before publishing.</span>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">Market</div>
+      <div class="chips" id="f-market">
+        <div class="chip on" data-mkt="ES">🇪🇸 ES</div>
+        <div class="chip" data-mkt="DE">🇩🇪 DE</div>
+        <div class="chip" data-mkt="FR">🇫🇷 FR</div>
+        <div class="chip" data-mkt="IT">🇮🇹 IT</div>
+        <div class="chip" data-mkt="UK">🇬🇧 UK</div>
+        <div class="chip disabled" data-mkt="NL">🇳🇱 NL</div>
+        <div class="chip disabled" data-mkt="PL">🇵🇱 PL</div>
+        <div class="chip disabled" data-mkt="CH">🇨🇭 CH</div>
+        <div class="chip disabled" data-mkt="US">🇺🇸 US</div>
+        <div class="chip disabled" data-mkt="AT">🇦🇹 AT</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="g2">
+        <div>
+          <div class="sec-t">Origin</div>
+          <div class="chips" id="f-from"><span style="color:#bbb">Loading...</span></div>
+        </div>
+        <div>
+          <div class="sec-t">Destination</div>
+          <div class="chips" id="f-to"><span style="color:#bbb">Loading...</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="g3">
+        <div>
+          <div class="sec-t">Departure month</div>
+          <div class="chips" id="f-month"></div>
+        </div>
+        <div>
+          <div class="sec-t">Departure day</div>
+          <div class="chips" id="f-dow"></div>
+        </div>
+        <div>
+          <div class="sec-t">Nights</div>
+          <div class="rng">
+            <div class="rng-lbl" id="fn-lbl">Any</div>
+            <div style="padding:0 4px;margin-top:4px">
+              <div class="rng-track"><div class="rng-fill" id="fn-fill"></div></div>
+              <div class="rng-inputs">
+                <input type="range" id="fn-min" min="1" max="15" value="1">
+                <input type="range" id="fn-max" min="1" max="15" value="15">
+              </div>
+            </div>
+            <div class="rng-ends"><span>1n</span><span>15n</span></div>
+            <div class="rng-ti">
+              <input type="number" id="fn-mini" min="1" max="15" value="1">
+              <span>to</span>
+              <input type="number" id="fn-maxi" min="1" max="15" value="15">
+              <span>nights</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">Max price (round trip)</div>
+      <div class="rng">
+        <div class="rng-lbl" id="fp-lbl">No limit</div>
+        <div style="padding:0 4px;margin-top:4px">
+          <div class="rng-track"><div class="rng-fill" id="fp-fill"></div></div>
+          <div class="rng-single"><input type="range" id="fp-max" min="50" max="500" value="500" step="10"></div>
+        </div>
+        <div class="rng-ends"><span>50€</span><span>500€+</span></div>
+        <div class="rng-ti">
+          <span>Max</span>
+          <input type="number" id="fp-maxi" min="50" max="500" value="500" style="width:90px">
+          <span>EUR</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="res-bar" style="margin-top:1.4rem">
+      <div>
+        <span class="res-count" id="f-count">Loading...</span>
+        <span class="res-sub" id="f-sub"></span>
+      </div>
+      <div class="btn-row">
+        <button class="btn-t20" onclick="fTop20()">☰ Top 20 cheapest</button>
+        <button class="btn-desel" id="f-desel" onclick="fDeselAll()" disabled>✕ Deselect all</button>
+        <button class="btn-copy" id="f-copy" onclick="fCopy()" disabled>↓ Copy selected</button>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <div class="loading" id="f-loading">Loading flights...</div>
+      <div id="f-err"></div>
+      <table id="f-tbl" style="display:none">
+        <thead>
+          <tr>
+            <th style="width:38px"></th>
+            <th>From</th>
+            <th>To</th>
+            <th class="sort" id="fth-dep" onclick="fSort('dep')">Departure <i class="si" id="fsi-dep">↕</i></th>
+            <th>Return</th>
+            <th class="sort" id="fth-days" onclick="fSort('days')">Nights <i class="si" id="fsi-days">↕</i></th>
+            <th class="sort on" id="fth-price" onclick="fSort('price')">Price <i class="si" id="fsi-price">↑</i></th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody id="f-tbody"></tbody>
+      </table>
+      <div class="empty" id="f-empty" style="display:none">No flights match your filters</div>
+    </div>
+    <div class="hint" id="f-hint"></div>
+  </div>
+
+  <!-- ══ HOTELS ══ -->
+  <div id="tab-hotels" class="tab-panel">
+    <div class="disc">
+      <span style="font-size:18px;flex-shrink:0">ℹ️</span>
+      <span><strong>Prices extracted from Google Hotels</strong> — we use them as a reference to identify the cheapest dates. When you check the price on Trivago it may turn out to be even cheaper.</span>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">Market</div>
+      <div class="chips" id="h-market">
+        <div class="chip on" data-mkt="ES">🇪🇸 ES</div>
+        <div class="chip" data-mkt="DE">🇩🇪 DE</div>
+        <div class="chip" data-mkt="UK">🇬🇧 UK</div>
+        <div class="chip" data-mkt="FR">🇫🇷 FR</div>
+        <div class="chip" data-mkt="IT">🇮🇹 IT</div>
+        <div class="chip" data-mkt="NL">🇳🇱 NL</div>
+        <div class="chip" data-mkt="PL">🇵🇱 PL</div>
+        <div class="chip" data-mkt="CH">🇨🇭 CH</div>
+        <div class="chip" data-mkt="US">🇺🇸 US</div>
+        <div class="chip" data-mkt="AT">🇦🇹 AT</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">Hotel</div>
+      <div class="chips" id="h-hotel"><span style="color:#bbb">Loading...</span></div>
+    </div>
+
+    <div class="sec">
+      <div class="g3">
+        <div>
+          <div class="sec-t">Month</div>
+          <div class="chips" id="h-month"></div>
+        </div>
+        <div>
+          <div class="sec-t">Check-in day</div>
+          <div class="chips" id="h-dow"></div>
+        </div>
+        <div>
+          <div class="sec-t">Nights</div>
+          <div class="rng">
+            <div class="rng-lbl" id="hn-lbl">Any</div>
+            <div style="padding:0 4px;margin-top:4px">
+              <div class="rng-track"><div class="rng-fill" id="hn-fill"></div></div>
+              <div class="rng-inputs">
+                <input type="range" id="hn-min" min="1" max="15" value="1">
+                <input type="range" id="hn-max" min="1" max="15" value="15">
+              </div>
+            </div>
+            <div class="rng-ends"><span>1n</span><span>15n</span></div>
+            <div class="rng-ti">
+              <input type="number" id="hn-mini" min="1" max="15" value="1">
+              <span>to</span>
+              <input type="number" id="hn-maxi" min="1" max="15" value="15">
+              <span>nights</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">Max price per night</div>
+      <div class="rng">
+        <div class="rng-lbl" id="hp-lbl">No limit</div>
+        <div style="padding:0 4px;margin-top:4px">
+          <div class="rng-track"><div class="rng-fill" id="hp-fill"></div></div>
+          <div class="rng-single"><input type="range" id="hp-max" min="20" max="500" value="500" step="10"></div>
+        </div>
+        <div class="rng-ends"><span>20€</span><span>500€+</span></div>
+        <div class="rng-ti">
+          <span>Max</span>
+          <input type="number" id="hp-maxi" min="20" max="500" value="500" style="width:90px">
+          <span>EUR/night</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="res-bar" style="margin-top:1.4rem">
+      <div>
+        <span class="res-count" id="h-count">—</span>
+        <span class="res-sub" id="h-sub"></span>
+      </div>
+      <div class="btn-row">
+        <button class="btn-t20" onclick="hTop20()">☰ Top 20 cheapest</button>
+        <button class="btn-desel" id="h-desel" onclick="hDeselAll()" disabled>✕ Deselect all</button>
+        <button class="btn-copy" id="h-copy" onclick="hCopy()" disabled>↓ Copy selected</button>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <div class="loading" id="h-loading">Loading hotels...</div>
+      <div id="h-err"></div>
+      <table id="h-tbl" style="display:none">
+        <thead>
+          <tr>
+            <th style="width:38px"></th>
+            <th class="sort" id="hth-dep" onclick="hSort('dep')">Check-in <i class="si" id="hsi-dep">↕</i></th>
+            <th>Check-out</th>
+            <th class="sort" id="hth-days" onclick="hSort('days')">Nights <i class="si" id="hsi-days">↕</i></th>
+            <th class="sort on" id="hth-price" onclick="hSort('price')">~Price/night <i class="si" id="hsi-price">↑</i></th>
+            <th class="sort" id="hth-total" onclick="hSort('total')">~Total <i class="si" id="hsi-total">↕</i></th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody id="h-tbody"></tbody>
+      </table>
+      <div class="empty" id="h-empty" style="display:none">No hotels match your filters</div>
+    </div>
+    <div class="hint" id="h-hint"></div>
+  </div>
+
+  <!-- ══ RUN AGENT ══ -->
+  <div id="tab-agent" class="tab-panel">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start">
+
+      <!-- FLIGHTS FORM -->
+      <div class="sec">
+        <div class="sec-t">✈️ Flight Enrichment Agent</div>
+        <p style="font-size:13px;color:#888;margin-bottom:1.25rem">Search for flight prices across date ranges.</p>
+
+        <div class="g2" style="gap:.75rem;margin-bottom:.75rem">
+          <div>
+            <label class="field-lbl">First date to check</label>
+            <input class="field" type="date" id="af-date-from">
+          </div>
+          <div>
+            <label class="field-lbl">Last date to check</label>
+            <input class="field" type="date" id="af-date-to">
+          </div>
+        </div>
+
+        <div class="g2" style="gap:.75rem;margin-bottom:.75rem">
+          <div>
+            <label class="field-lbl">From (airport codes)</label>
+            <input class="field" type="text" id="af-from" placeholder="MAD, BCN">
+          </div>
+          <div>
+            <label class="field-lbl">To (airport codes)</label>
+            <input class="field" type="text" id="af-to" placeholder="LHR, CDG">
+          </div>
+        </div>
+
+        <div style="margin-bottom:.75rem">
+          <label class="field-lbl">Days to depart</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+            <label class="day-chk"><input type="checkbox" value="Monday" name="af-days"> Mon</label>
+            <label class="day-chk"><input type="checkbox" value="Tuesday" name="af-days"> Tue</label>
+            <label class="day-chk"><input type="checkbox" value="Wednesday" name="af-days"> Wed</label>
+            <label class="day-chk"><input type="checkbox" value="Thursday" name="af-days"> Thu</label>
+            <label class="day-chk"><input type="checkbox" value="Friday" name="af-days"> Fri</label>
+            <label class="day-chk"><input type="checkbox" value="Saturday" name="af-days"> Sat</label>
+            <label class="day-chk"><input type="checkbox" value="Sunday" name="af-days"> Sun</label>
+          </div>
+        </div>
+
+        <div style="margin-bottom:.75rem">
+          <label class="field-lbl">Entry ID</label>
+          <input class="field" type="text" id="af-entryid" placeholder="e.g. mad_lhr_jun26">
+        </div>
+
+        <div class="g2" style="gap:.75rem;margin-bottom:.75rem">
+          <div>
+            <label class="field-lbl">Market</label>
+            <select class="field" id="af-market">
+              <option value="es">🇪🇸 es</option>
+              <option value="de">🇩🇪 de</option>
+              <option value="at">🇦🇹 at</option>
+              <option value="fr">🇫🇷 fr</option>
+              <option value="it">🇮🇹 it</option>
+              <option value="nl">🇳🇱 nl</option>
+              <option value="uk">🇬🇧 uk</option>
+              <option value="us">🇺🇸 us</option>
+              <option value="ch">🇨🇭 ch</option>
+              <option value="Magda (pl)">🇵🇱 Magda (pl)</option>
+              <option value="Bartosz (pl)">🇵🇱 Bartosz (pl)</option>
+              <option value="Mikołaj (pl)">🇵🇱 Mikołaj (pl)</option>
+              <option value="Joanna (pl)">🇵🇱 Joanna (pl)</option>
+              <option value="Wojciech (pl)">🇵🇱 Wojciech (pl)</option>
+              <option value="Moni (pl)">🇵🇱 Moni (pl)</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-lbl">Max price</label>
+            <input class="field" type="number" id="af-maxprice" placeholder="200">
+          </div>
+        </div>
+
+        <div class="g2" style="gap:.75rem;margin-bottom:.75rem">
+          <div>
+            <label class="field-lbl">Include airlines <span style="font-weight:400;color:#bbb;text-transform:none;letter-spacing:0">(optional)</span></label>
+            <input class="field" type="text" id="af-include" placeholder="VY, IB">
+          </div>
+          <div>
+            <label class="field-lbl">Exclude airlines <span style="font-weight:400;color:#bbb;text-transform:none;letter-spacing:0">(optional)</span></label>
+            <input class="field" type="text" id="af-exclude" placeholder="FR">
+          </div>
+        </div>
+
+        <div class="g2" style="gap:.75rem;margin-bottom:.75rem">
+          <div>
+            <label class="field-lbl">Stops</label>
+            <select class="field" id="af-stops">
+              <option value="nonstop">Nonstop only</option>
+              <option value="one_stop_or_fewer">One stop or fewer</option>
+              <option value="any">Any</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-lbl">Length of trip (days)</label>
+            <input class="field" type="text" id="af-length" placeholder="3,5,7">
+          </div>
+        </div>
+
+        <div class="g2" style="gap:.75rem;margin-bottom:1.25rem">
+          <div>
+            <label class="field-lbl">Partner</label>
+            <select class="field" id="af-partner">
+              <option value="Skyscanner">Skyscanner</option>
+              <option value="Kayak">Kayak</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-lbl">Travellers</label>
+            <select class="field" id="af-travellers">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn-copy" id="af-submit" onclick="afSubmit()">⚡ Run Flights Agent</button>
+          <span id="af-status" style="font-size:13px;color:#888"></span>
+        </div>
+      </div>
+
+      <!-- HOTELS FORM -->
+      <div class="sec">
+        <div class="sec-t">🏨 Hotel Enrichment Agent</div>
+        <p style="font-size:13px;color:#888;margin-bottom:1.25rem">Generate Trivago deeplinks for hotel date ranges.</p>
+
+        <div class="g2" style="gap:.75rem;margin-bottom:.75rem">
+          <div>
+            <label class="field-lbl">Partner</label>
+            <select class="field" id="ah-partner">
+              <option value="TRIVAGO">Trivago</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-lbl">Market</label>
+            <select class="field" id="ah-market">
+              <option value="ES">🇪🇸 ES</option>
+              <option value="DE">🇩🇪 DE</option>
+              <option value="UK">🇬🇧 UK</option>
+              <option value="FR">🇫🇷 FR</option>
+              <option value="IT">🇮🇹 IT</option>
+              <option value="NL">🇳🇱 NL</option>
+              <option value="PL">🇵🇱 PL</option>
+              <option value="CH">🇨🇭 CH</option>
+              <option value="US">🇺🇸 US</option>
+              <option value="AT">🇦🇹 AT</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-bottom:.75rem">
+          <label class="field-lbl">Entry ID</label>
+          <input class="field" type="text" id="ah-entryid" placeholder="e.g. hotel_arts_barcelona">
+        </div>
+
+        <div style="margin-bottom:.75rem">
+          <label class="field-lbl">Trivago URL</label>
+          <input class="field" type="url" id="ah-trivago-url" placeholder="https://www.trivago.es/...">
+        </div>
+
+        <div style="margin-bottom:.75rem">
+          <label class="field-lbl">Google URL</label>
+          <input class="field" type="url" id="ah-google-url" placeholder="https://www.google.com/travel/search?...">
+        </div>
+
+        <div class="g2" style="gap:.75rem;margin-bottom:.75rem">
+          <div>
+            <label class="field-lbl">Start date</label>
+            <input class="field" type="date" id="ah-start">
+          </div>
+          <div>
+            <label class="field-lbl">End date</label>
+            <input class="field" type="date" id="ah-end">
+          </div>
+        </div>
+
+        <div style="margin-bottom:.75rem">
+          <label class="field-lbl">Days to check-in</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+            <label class="day-chk"><input type="checkbox" value="Monday" name="ah-days"> Mon</label>
+            <label class="day-chk"><input type="checkbox" value="Tuesday" name="ah-days"> Tue</label>
+            <label class="day-chk"><input type="checkbox" value="Wednesday" name="ah-days"> Wed</label>
+            <label class="day-chk"><input type="checkbox" value="Thursday" name="ah-days"> Thu</label>
+            <label class="day-chk"><input type="checkbox" value="Friday" name="ah-days"> Fri</label>
+            <label class="day-chk"><input type="checkbox" value="Saturday" name="ah-days"> Sat</label>
+            <label class="day-chk"><input type="checkbox" value="Sunday" name="ah-days"> Sun</label>
+          </div>
+        </div>
+
+        <div class="g2" style="gap:.75rem;margin-bottom:.75rem">
+          <div>
+            <label class="field-lbl">Adults (default 2)</label>
+            <input class="field" type="number" id="ah-adults" value="2" min="1">
+          </div>
+          <div>
+            <label class="field-lbl">Children ages (comma separated)</label>
+            <input class="field" type="text" id="ah-children" placeholder="e.g. 5,8">
+          </div>
+        </div>
+
+        <div style="margin-bottom:1.25rem">
+          <label class="field-lbl">Trip length (e.g. "3" or "3-7")</label>
+          <input class="field" type="text" id="ah-length" placeholder="3 or 3-7">
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn-copy" id="ah-submit" onclick="ahSubmit()">⚡ Run Hotels Agent</button>
+          <span id="ah-status" style="font-size:13px;color:#888"></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── CONFIG ───────────────────────────────────────────────────────────
+const SHEET_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8OMtbL9cSw1avh7m_j9eafiM11AkXkz4jVNnTUBpb2Pwi-tgcflBmvX0Ae8yvaC12uZKcf9qzJl7Q/pub?gid=';
+
+// Flights: one gid per market
+const FLIGHT_GIDS = {
+  ES: '0',             // Sheet1
+  DE: '248195385',
+  FR: '1288751255',
+  IT: '1718810998',
+  UK: '1723667953',
+};
+
+// Hotels (Trivago): one gid per market
+const HOTEL_GIDS = {
+  ES: '1378574669',
+  DE: '715724132',
+  UK: '1743212487',
+  FR: '1582570154',
+  IT: '1172119049',
+  NL: '1340210198',
+  PL: '349080011',
+  CH: '963954565',
+  US: '521948350',
+  AT: '1854292994',
+};
+
+function sheetUrl(gid){ return `${SHEET_BASE}${gid}&single=true&output=csv`; }
+
+// ── SHARED ───────────────────────────────────────────────────────────
+const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DA = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const SORT_KEYS = {
+  price: ['price','dep','days'], dep: ['dep','price','days'],
+  days:  ['days','dep','price'], total: ['total','dep','days']
+};
+
+const $ = id => document.getElementById(id);
+const dow  = d => new Date(d).getDay();
+const moKey= d => { const x=new Date(d); return`${MO[x.getMonth()]} ${String(x.getFullYear()).slice(2)}`; };
+const fmt  = s => { const d=new Date(s); return`${String(d.getDate()).padStart(2,'0')} ${MO[d.getMonth()].toLowerCase()}`; };
+const fmtD = s => DA[new Date(s).getDay()];
+
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+
+function parseCSV(text){
+  const lines=text.trim().split(/\r?\n/);
+  const hdr=lines[0].split(',').map(h=>h.replace(/^"|"$/g,'').trim());
+  return lines.slice(1).map(line=>{
+    const cols=[];let cur='',q=false,i=0;
+    while(i<line.length){
+      const c=line[i];
+      if(c==='"'){
+        if(q&&line[i+1]==='"'){cur+='"';i+=2;continue;} // escaped quote ""
+        q=!q;
+      } else if(c===','&&!q){
+        cols.push(cur);cur='';
+      } else {
+        cur+=c;
+      }
+      i++;
+    }
+    cols.push(cur);
+    const o={};hdr.forEach((h,i)=>o[h]=(cols[i]||'').trim());return o;
+  });
+}
+
+async function fetchCSV(url){
+  const proxies=[u=>u,u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`];
+  for(const p of proxies){
+    try{const r=await fetch(p(url),{mode:'cors'});if(r.ok){const t=await r.text();if(t.length>100)return t;}}catch{}
+  }
+  throw new Error('Could not fetch data');
+}
+
+function sortArr(arr,col,dir){
+  const keys=SORT_KEYS[col];
+  return[...arr].sort((a,b)=>{
+    for(let i=0;i<keys.length;i++){const k=keys[i],d=i===0?dir:1;if(a[k]<b[k])return-1*d;if(a[k]>b[k])return 1*d;}return 0;
+  });
+}
+
+function copyText(txt,n){
+  navigator.clipboard.writeText(txt)
+    .then(()=>toast(`✓ ${n} snippet${n>1?'s':''} copied`))
+    .catch(()=>{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('✓ Copied');});
+}
+
+function badge(p){
+  if(/skyscanner/i.test(p))return`<span class="bsky">Skyscanner</span>`;
+  if(/ryanair/i.test(p))return`<span class="bry">Ryanair</span>`;
+  return`<span class="both">${p}</span>`;
+}
+
+// Single-select chips (market, origin, destination, hotel)
+function buildChips(id,vals,cur,labelFn,onchange){
+  const el=$(id);
+  const valid=vals.includes(cur)?cur:'';
+  el.innerHTML='<div class="chip'+(valid===''?' on':'')+'\" data-val="">All</div>'+
+    vals.map(v=>`<div class="chip${v===valid?' on':''}" data-val="${v}">${labelFn?labelFn(v):v}</div>`).join('');
+  el.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+    el.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on');onchange();
+  }));
+}
+
+// Multi-select chips (month, day of week) — clicking toggles; "All" deselects others
+function buildMultiChips(id,vals,labelFn,onchange){
+  const el=$(id);
+  el.innerHTML='<div class="mchip on" data-val="">All</div>'+
+    vals.map(v=>`<div class="mchip" data-val="${v}">${labelFn?labelFn(v):v}</div>`).join('');
+  el.querySelectorAll('.mchip').forEach(c=>c.addEventListener('click',()=>{
+    if(c.dataset.val===''){
+      // All selected — deselect everything else
+      el.querySelectorAll('.mchip').forEach(x=>x.classList.remove('on'));
+      c.classList.add('on');
+    } else {
+      // Toggle this chip
+      el.querySelector('.mchip[data-val=""]').classList.remove('on');
+      c.classList.toggle('on');
+      // If nothing selected, re-activate All
+      if(!el.querySelector('.mchip.on')) el.querySelector('.mchip[data-val=""]').classList.add('on');
+    }
+    onchange();
+  }));
+}
+
+// Get selected values from a multi-select chip group (empty array = All)
+function getMV(id){
+  const sel=[...$(id).querySelectorAll('.mchip.on')].map(c=>c.dataset.val).filter(v=>v!=='');
+  return sel;
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────
+function switchTab(t){
+  ['flights','hotels','agent'].forEach(x=>{
+    $(`tab-${x}`).classList.toggle('active',x===t);
+    $(`tab-btn-${x}`).classList.toggle('active',x===t);
+  });
+}
+
+function getChecked(name){return[...document.querySelectorAll(`input[name="${name}"]:checked`)].map(c=>c.value)}
+
+async function afSubmit(){
+  const btn=$('af-submit'),status=$('af-status');
+  const days=getChecked('af-days');
+  // n8n uses field-N names, not human-readable labels
+  const vals={
+    'field-0':  $('af-date-from').value,
+    'field-1':  $('af-date-to').value,
+    'field-2':  $('af-from').value,
+    'field-3':  $('af-to').value,
+    'field-4':  days,
+    'field-5':  $('af-entryid').value,
+    'field-6':  $('af-market').value,
+    'field-7':  $('af-maxprice').value,
+    'field-8':  $('af-include').value,
+    'field-9':  $('af-exclude').value,
+    'field-10': $('af-stops').value,
+    'field-11': $('af-length').value,
+    'field-12': $('af-partner').value,
+    'field-13': $('af-travellers').value,
+  };
+  const required={
+    'First Date to check':'field-0','Last Date to check':'field-1',
+    'From':'field-2','To':'field-3','Entry ID':'field-5',
+    'Max Price':'field-7','Length of trip':'field-11'
+  };
+  for(const [label,key] of Object.entries(required)){
+    if(!vals[key]){status.textContent=`⚠️ "${label}" is required`;status.style.color='#c0392b';return;}
+  }
+  // Open n8n form in new tab and auto-fill + submit
+  const params = new URLSearchParams();
+  Object.entries(vals).forEach(([k,v])=>{
+    if(Array.isArray(v)) params.set(k, JSON.stringify(v));
+    else params.set(k, v);
+  });
+  btn.disabled=true;btn.textContent='⏳ Launching...';status.textContent='';
+  try{
+    const res=await fetch('/.netlify/functions/submit-agent',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({formType:'flights',fields:vals})
+    });
+    const text=await res.text();
+    let data={};try{data=JSON.parse(text);}catch(e){}
+    if(res.ok){
+      status.textContent='✓ Agent launched — check the Google Sheet in a few minutes.';
+      status.style.color='#0F6E56';
+      toast('⚡ Flights agent launched!');
+    }else{
+      status.textContent=`⚠️ Error: ${data.error||text||res.status}`;
+      status.style.color='#c0392b';
+    }
+  }catch(e){
+    status.textContent='⚠️ Could not reach the server: '+e.message;
+    status.style.color='#c0392b';
+  }finally{
+    btn.disabled=false;btn.textContent='⚡ Run Flights Agent';
+  }
+}
+
+async function ahSubmit(){
+  const btn=$('ah-submit'),status=$('ah-status');
+  const days=getChecked('ah-days');
+  const vals={
+    'field-0':  $('ah-partner').value,
+    'field-1':  $('ah-market').value,
+    'field-2':  $('ah-entryid').value,
+    'field-3':  $('ah-trivago-url').value,
+    'field-4':  $('ah-google-url').value,
+    'field-5':  $('ah-start').value,
+    'field-6':  $('ah-end').value,
+    'field-7':  days,
+    'field-8':  $('ah-adults').value,
+    'field-9':  $('ah-children').value,
+    'field-10': $('ah-length').value,
+  };
+  const required={'Entry ID':'field-2','Trivago URL':'field-3','Google URL':'field-4','Start date':'field-5','End date':'field-6','Trip length':'field-10'};
+  for(const [label,key] of Object.entries(required)){
+    if(!vals[key]){status.textContent=`⚠️ "${label}" is required`;status.style.color='#c0392b';return;}
+  }
+  btn.disabled=true;btn.textContent='⏳ Launching...';status.textContent='';
+  btn.disabled=true;btn.textContent='⏳ Launching...';status.textContent='';
+  try{
+    const res=await fetch('/.netlify/functions/submit-agent',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({formType:'hotels',fields:vals})
+    });
+    const text=await res.text();
+    let data={};try{data=JSON.parse(text);}catch(e){}
+    if(res.ok){
+      status.textContent='✓ Agent launched — check the Google Sheet in a few minutes.';
+      status.style.color='#0F6E56';
+      toast('⚡ Hotels agent launched!');
+    }else{
+      status.textContent=`⚠️ Error: ${data.error||text||res.status}`;
+      status.style.color='#c0392b';
+    }
+  }catch(e){
+    status.textContent='⚠️ Could not reach the server: '+e.message;
+    status.style.color='#c0392b';
+  }finally{
+    btn.disabled=false;btn.textContent='⚡ Run Hotels Agent';
+  }
+}
+function reloadAll(){
+  fSel.clear();fUpdBtn();
+  hSel.clear();hUpdBtn();
+  fLoadedMarkets={};
+  hLoadedMarkets={};
+  loadFlightMarket(fCurrentMarket||'ES');
+  loadHotelMarket(hCurrentMarket||'ES');
+}
+
+// ── FLIGHTS ───────────────────────────────────────────────────────────
+let FD=[],fFil=[],fSel=new Set(),fCol='price',fDir=1,fNn=1,fNx=15,fPx=500;
+let fCurrentMarket='ES',fLoadedMarkets={};
+
+// Wire up flight market chips
+$('f-market').querySelectorAll('.chip:not(.disabled)').forEach(c=>{
+  c.addEventListener('click',()=>{
+    $('f-market').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on');
+    loadFlightMarket(c.dataset.mkt);
+  });
+});
+
+async function loadFlightMarket(mkt){
+  fCurrentMarket=mkt;
+  fSel.clear();fUpdBtn();
+  fNn=1;fNx=15;fPx=500;
+  if(fLoadedMarkets[mkt]){
+    FD=fLoadedMarkets[mkt];
+    fInitChips();fNRange();fPRange();fUpdSort(false);fRender();
+    return;
+  }
+  $('f-loading').style.display='block';
+  $('f-loading').textContent='⏳ Loading '+mkt+' flights...';
+  $('f-tbl').style.display='none';
+  $('f-err').innerHTML='';
+  $('f-count').textContent='Loading...';
+  try{
+    const rows=parseCSV(await fetchCSV(sheetUrl(FLIGHT_GIDS[mkt])));
+    const data=rows
+      .filter(r=>r.price&&r.departureDate&&r.departureDate!=='No prices in range'&&!isNaN(+r.price))
+      .map(r=>({partner:r.partner||'',from:r.from||'',to:r.to||'',dep:r.departureDate,ret:r.returnDate||'',days:parseInt(r.tripDays)||0,price:Math.round(+r.price),lowest:r.isLowest==='Yes',link:r.partner_link||'',snippet:r.html_snippet||''}));
+    fLoadedMarkets[mkt]=data;
+    // Only render if user hasn't switched to another market while loading
+    if(fCurrentMarket!==mkt) return;
+    FD=data;
+    $('f-loading').style.display='none';
+    $('f-tbl').style.display='table';
+    $('f-hint').textContent=`Market: ${mkt} · ${FD.length} flights · ${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}`;
+    fInitChips();fNRange();fPRange();fUpdSort(false);fRender();
+  }catch(e){
+    $('f-loading').style.display='none';
+    $('f-err').innerHTML=`<div class="err">⚠️ <strong>Could not load flights for ${mkt}.</strong><br>Run: <code>python3 -m http.server 8080</code></div>`;
+    $('f-count').textContent='Error';
+  }
+}
+
+function fInitChips(){
+  const allFrom=[...new Set(FD.map(d=>d.from))].sort();
+  const allTo=[...new Set(FD.map(d=>d.to))].sort();
+  buildChips('f-from',allFrom,'',null,()=>{fRefreshFromTo();fRender();});
+  buildChips('f-to',allTo,'',null,()=>{fRefreshFromTo();fRender();});
+  buildMultiChips('f-month',[...new Set(FD.map(d=>moKey(d.dep)))],null,()=>fRender());
+  buildMultiChips('f-dow',[...new Set(FD.map(d=>dow(d.dep)))].sort((a,b)=>a-b),v=>DA[v],()=>fRender());
+}
+
+function fRefreshFromTo(){
+  const from=document.querySelector('#f-from .chip.on')?.dataset.val||'';
+  const to=document.querySelector('#f-to .chip.on')?.dataset.val||'';
+  const avTo=from?[...new Set(FD.filter(d=>d.from===from).map(d=>d.to))].sort():[...new Set(FD.map(d=>d.to))].sort();
+  const avFrom=to?[...new Set(FD.filter(d=>d.to===to).map(d=>d.from))].sort():[...new Set(FD.map(d=>d.from))].sort();
+  buildChips('f-from',avFrom,from,null,()=>{fRefreshFromTo();fRender();});
+  buildChips('f-to',avTo,to,null,()=>{fRefreshFromTo();fRender();});
+}
+
+function fNRange(){
+  const p1=(fNn-1)/14*100,p2=(fNx-1)/14*100;
+  $('fn-fill').style.cssText=`left:${p1}%;width:${p2-p1}%`;
+  $('fn-lbl').textContent=(fNn===1&&fNx===15)?'Any':(fNn===fNx?`${fNn}n`:`${fNn}–${fNx}n`);
+  ['fn-min','fn-max','fn-mini','fn-maxi'].forEach((id,i)=>$(id).value=[fNn,fNx,fNn,fNx][i]);
+}
+function fPRange(){
+  $('fp-fill').style.cssText=`left:0%;width:${(fPx-50)/450*100}%`;
+  $('fp-lbl').textContent=fPx>=500?'No limit':`Max ${fPx}€`;
+  $('fp-max').value=fPx;$('fp-maxi').value=fPx;
+}
+$('fn-min').oninput=function(){fNn=Math.min(+this.value,fNx);fNRange();fRender()};
+$('fn-max').oninput=function(){fNx=Math.max(+this.value,fNn);fNRange();fRender()};
+$('fn-mini').oninput=function(){fNn=Math.min(Math.max(1,+this.value||1),fNx);fNRange();fRender()};
+$('fn-maxi').oninput=function(){fNx=Math.max(Math.min(15,+this.value||15),fNn);fNRange();fRender()};
+$('fp-max').oninput=function(){fPx=+this.value;fPRange();fRender()};
+$('fp-maxi').oninput=function(){fPx=Math.min(500,Math.max(50,+this.value||500));fPRange();fRender()};
+
+function fSort(col){if(fCol===col)fDir=-fDir;else{fCol=col;fDir=1;}fUpdSort(true);}
+function fUpdSort(render){
+  ['price','dep','days'].forEach(c=>{
+    $(`fth-${c}`).classList.toggle('on',c===fCol);
+    $(`fsi-${c}`).textContent=c===fCol?(fDir===1?'↑':'↓'):'↕';
+  });
+  $('f-sub').textContent=`· sorted by ${fCol==='dep'?'date':fCol==='days'?'nights':'price'} ${fDir===1?'↑':'↓'}`;
+  if(render)fRender();
+}
+
+function fRender(){
+  if(!FD.length)return;
+  const from=document.querySelector('#f-from .chip.on')?.dataset.val||'';
+  const to=document.querySelector('#f-to .chip.on')?.dataset.val||'';
+  const months=getMV('f-month');
+  const days=getMV('f-dow');
+  const maxP=fPx>=500?Infinity:fPx;
+  fFil=sortArr(FD.filter(d=>{
+    if(from&&d.from!==from)return false;
+    if(to&&d.to!==to)return false;
+    if(months.length&&!months.includes(moKey(d.dep)))return false;
+    if(days.length&&!days.includes(String(dow(d.dep))))return false;
+    if(d.days<fNn||d.days>fNx)return false;
+    if(d.price>maxP)return false;
+    return true;
+  }),fCol,fDir);
+  fSel=new Set([...fSel].filter(i=>i<fFil.length));
+  $('f-count').textContent=`${fFil.length} flights`;
+  const empty=$('f-empty');
+  if(!fFil.length){$('f-tbody').innerHTML='';empty.style.display='block';fUpdBtn();return;}
+  empty.style.display='none';
+  const cheapest=Math.min(...fFil.map(d=>d.price));
+  $('f-tbody').innerHTML=fFil.map((d,i)=>{
+    const sel=fSel.has(i),flame=d.lowest&&d.price===cheapest;
+    return`<tr class="${sel?'sel':''}" data-fi="${i}">
+      <td><input type="checkbox" ${sel?'checked':''} onchange="fTog(${i},this)"></td>
+      <td style="font-weight:700">${d.from}</td>
+      <td style="font-weight:700">${d.to}</td>
+      <td>${fmt(d.dep)}<span class="dp">${fmtD(d.dep)}</span></td>
+      <td>${fmt(d.ret)}<span class="dp">${fmtD(d.ret)}</span></td>
+      <td>${d.days}n</td>
+      <td>${flame?`<span class="lp">🔥 ${d.price}€</span>`:`<span class="pv">${d.price}€</span>`}</td>
+      <td class="lnk">${d.link?`<a href="${d.link}" target="_blank">Check ↗</a>`:'<span style="color:#bbb;font-size:12px">—</span>'}</td>
+    </tr>`;
+  }).join('');
+  fUpdBtn();
+}
+function fTog(i,cb){
+  if(cb.checked)fSel.add(i);else fSel.delete(i);
+  document.querySelector(`#f-tbody tr[data-fi="${i}"]`).classList.toggle('sel',cb.checked);
+  fUpdBtn();
+}
+function fTop20(){
+  const ids=sortArr(fFil,'price',1).slice(0,20).map(d=>fFil.indexOf(d));
+  fSel=new Set(ids);fRender();toast(`Top ${fSel.size} cheapest selected`);
+}
+function fDeselAll(){fSel.clear();fRender();toast('All deselected')}
+function fUpdBtn(){
+  const n=fSel.size;
+  $('f-copy').disabled=n===0;$('f-desel').disabled=n===0;
+  $('f-copy').textContent=n?`↓ Copy ${n} snippet${n>1?'s':''}`:'↓ Copy selected';
+}
+function fCopy(){copyText([...fSel].sort((a,b)=>a-b).map(i=>fFil[i].snippet).join('\n'),fSel.size)}
+
+// ── HOTELS ────────────────────────────────────────────────────────────
+let HD=[],hFil=[],hSel=new Set(),hCol='price',hDir=1,hNn=1,hNx=15,hPx=500;
+let hCurrentMarket='ES',hLoadedMarkets={};
+
+$('h-market').querySelectorAll('.chip').forEach(c=>{
+  c.addEventListener('click',()=>{
+    $('h-market').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on');
+    loadHotelMarket(c.dataset.mkt);
+  });
+});
+
+async function loadHotelMarket(mkt){
+  hCurrentMarket=mkt;
+  hSel.clear();hUpdBtn();
+  // Reset filters on market switch
+  hNn=1;hNx=15;hPx=500;
+  if(hLoadedMarkets[mkt]){
+    HD=hLoadedMarkets[mkt];
+    hInitChips();hNRange();hPRange();hUpdSort(false);hRender();
+    return;
+  }
+  $('h-loading').style.display='block';
+  $('h-loading').textContent='⏳ Loading '+mkt+' hotels...';
+  $('h-tbl').style.display='none';
+  $('h-err').innerHTML='';
+  $('h-count').textContent='Loading...';
+  try{
+    const parsePrice=s=>parseFloat((s||'').replace(/[^\d.,]/g,'').replace(',','.'))|| 0;
+    const rows=parseCSV(await fetchCSV(sheetUrl(HOTEL_GIDS[mkt])));
+    const data=rows
+      .filter(r=>r.checkIn&&r.hasPrice==='TRUE'&&parsePrice(r.google_price_per_night)>0)
+      .map(r=>({
+        name:r.trivagoHotelId||r.googlePropertyToken||'Unknown',
+        dep:r.checkIn,ret:r.checkOut||'',
+        days:parseInt(r.nights)||0,
+        price:Math.round(parsePrice(r.google_price_per_night)),
+        total:Math.round(parsePrice(r.google_total_price)),
+        link:r.deepLink||'',
+        snippet:r.deepLink?`<a href="${r.deepLink}" target="_blank" data-track-source="hotel_${mkt.toLowerCase()}">${r.trivagoHotelId||'Hotel'} ${r.checkIn} – ${r.checkOut}</a>`:''
+      }));
+    hLoadedMarkets[mkt]=data;
+    // Only render if user hasn't switched to another market while loading
+    if(hCurrentMarket!==mkt) return;
+    HD=data;
+    $('h-loading').style.display='none';
+    $('h-tbl').style.display='table';
+    $('h-hint').textContent=`Market: ${mkt} · ${HD.length} entries · ${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}`;
+    hInitChips();hNRange();hPRange();hUpdSort(false);hRender();
+  }catch(e){
+    $('h-loading').style.display='none';
+    $('h-err').innerHTML=`<div class="err">⚠️ <strong>Could not load hotels for ${mkt}.</strong><br>Run: <code>python3 -m http.server 8080</code></div>`;
+    $('h-count').textContent='Error';
+  }
+}
+
+function hInitChips(){
+  buildChips('h-hotel',[...new Set(HD.map(d=>d.name))].sort(),'',null,()=>hRender());
+  buildMultiChips('h-month',[...new Set(HD.map(d=>moKey(d.dep)))],null,()=>hRender());
+  buildMultiChips('h-dow',[...new Set(HD.map(d=>dow(d.dep)))].sort((a,b)=>a-b),v=>DA[v],()=>hRender());
+}
+function hNRange(){
+  const p1=(hNn-1)/14*100,p2=(hNx-1)/14*100;
+  $('hn-fill').style.cssText=`left:${p1}%;width:${p2-p1}%`;
+  $('hn-lbl').textContent=(hNn===1&&hNx===15)?'Any':(hNn===hNx?`${hNn}n`:`${hNn}–${hNx}n`);
+  ['hn-min','hn-max','hn-mini','hn-maxi'].forEach((id,i)=>$(id).value=[hNn,hNx,hNn,hNx][i]);
+}
+function hPRange(){
+  $('hp-fill').style.cssText=`left:0%;width:${(hPx-20)/480*100}%`;
+  $('hp-lbl').textContent=hPx>=500?'No limit':`Max ${hPx}€/night`;
+  $('hp-max').value=hPx;$('hp-maxi').value=hPx;
+}
+$('hn-min').oninput=function(){hNn=Math.min(+this.value,hNx);hNRange();hRender()};
+$('hn-max').oninput=function(){hNx=Math.max(+this.value,hNn);hNRange();hRender()};
+$('hn-mini').oninput=function(){hNn=Math.min(Math.max(1,+this.value||1),hNx);hNRange();hRender()};
+$('hn-maxi').oninput=function(){hNx=Math.max(Math.min(15,+this.value||15),hNn);hNRange();hRender()};
+$('hp-max').oninput=function(){hPx=+this.value;hPRange();hRender()};
+$('hp-maxi').oninput=function(){hPx=Math.min(500,Math.max(20,+this.value||500));hPRange();hRender()};
+
+function hSort(col){if(hCol===col)hDir=-hDir;else{hCol=col;hDir=1;}hUpdSort(true);}
+function hUpdSort(render){
+  ['price','dep','days','total'].forEach(c=>{
+    const th=$(`hth-${c}`),si=$(`hsi-${c}`);
+    if(th)th.classList.toggle('on',c===hCol);
+    if(si)si.textContent=c===hCol?(hDir===1?'↑':'↓'):'↕';
+  });
+  const lbl={price:'price/night',dep:'check-in',days:'nights',total:'total'}[hCol]||hCol;
+  $('h-sub').textContent=`· sorted by ${lbl} ${hDir===1?'↑':'↓'}`;
+  if(render)hRender();
+}
+
+function hRender(){
+  if(!HD.length)return;
+  const hotel=document.querySelector('#h-hotel .chip.on')?.dataset.val||'';
+  const months=getMV('h-month');
+  const days=getMV('h-dow');
+  const maxP=hPx>=500?Infinity:hPx;
+  hFil=sortArr(HD.filter(d=>{
+    if(hotel&&d.name!==hotel)return false;
+    if(months.length&&!months.includes(moKey(d.dep)))return false;
+    if(days.length&&!days.includes(String(dow(d.dep))))return false;
+    if(d.days<hNn||d.days>hNx)return false;
+    if(d.price>maxP)return false;
+    return true;
+  }),hCol,hDir);
+  hSel=new Set([...hSel].filter(i=>i<hFil.length));
+  $('h-count').textContent=`${hFil.length} date${hFil.length!==1?'s':''}`;
+  const empty=$('h-empty');
+  if(!hFil.length){$('h-tbody').innerHTML='';empty.style.display='block';hUpdBtn();return;}
+  empty.style.display='none';
+  const cheapestP=Math.min(...hFil.map(d=>d.price));
+  const cheapestT=Math.min(...hFil.map(d=>d.total));
+  $('h-tbody').innerHTML=hFil.map((d,i)=>{
+    const sel=hSel.has(i);
+    const total=d.total||d.price*d.days;
+    return`<tr class="${sel?'sel':''}" data-hi="${i}">
+      <td><input type="checkbox" ${sel?'checked':''} onchange="hTog(${i},this)"></td>
+      <td>${fmt(d.dep)}<span class="dp">${fmtD(d.dep)}</span></td>
+      <td>${fmt(d.ret)}<span class="dp">${fmtD(d.ret)}</span></td>
+      <td>${d.days}n</td>
+      <td>${d.price===cheapestP?`<span class="lp">🔥 ${d.price}€</span>`:`<span class="pv">${d.price}€</span>`}</td>
+      <td style="color:#888;font-weight:700">${total===cheapestT?`<span class="lp">🔥 ${total}€</span>`:`${total}€`}</td>
+      <td class="lnk">${d.link?`<a href="${d.link}" target="_blank">Check ↗</a>`:'<span style="color:#bbb;font-size:12px">—</span>'}</td>
+    </tr>`;
+  }).join('');
+  hUpdBtn();
+}
+function hTog(i,cb){
+  if(cb.checked)hSel.add(i);else hSel.delete(i);
+  document.querySelector(`#h-tbody tr[data-hi="${i}"]`).classList.toggle('sel',cb.checked);
+  hUpdBtn();
+}
+function hTop20(){
+  const ids=sortArr(hFil,'price',1).slice(0,20).map(d=>hFil.indexOf(d));
+  hSel=new Set(ids);hRender();toast(`Top ${hSel.size} cheapest selected`);
+}
+function hDeselAll(){hSel.clear();hRender();toast('All deselected')}
+function hUpdBtn(){
+  const n=hSel.size;
+  $('h-copy').disabled=n===0;$('h-desel').disabled=n===0;
+  $('h-copy').textContent=n?`↓ Copy ${n} snippet${n>1?'s':''}`:'↓ Copy selected';
+}
+function hCopy(){copyText([...hSel].sort((a,b)=>a-b).map(i=>hFil[i].snippet).join('\n'),hSel.size)}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+loadFlightMarket('ES');
+loadHotelMarket('ES');
+
+// Preload remaining markets silently in background after 3s
+setTimeout(()=>{
+  const fMarkets = Object.keys(FLIGHT_GIDS).filter(m=>m!=='ES');
+  const hMarkets = Object.keys(HOTEL_GIDS).filter(m=>m!=='ES');
+  // Stagger to avoid hammering Google Sheets
+  fMarkets.forEach((mkt,i)=>setTimeout(()=>{
+    if(!fLoadedMarkets[mkt]) _silentLoad('flight', mkt);
+  }, i*800));
+  hMarkets.forEach((mkt,i)=>setTimeout(()=>{
+    if(!hLoadedMarkets[mkt]) _silentLoad('hotel', mkt);
+  }, i*800));
+}, 3000);
+
+async function _silentLoad(type, mkt){
+  try{
+    const gid = type==='flight' ? FLIGHT_GIDS[mkt] : HOTEL_GIDS[mkt];
+    if(!gid) return;
+    const text = await fetchCSV(sheetUrl(gid));
+    const rows = parseCSV(text);
+    if(type==='flight'){
+      fLoadedMarkets[mkt]=rows
+        .filter(r=>r.price&&r.departureDate&&r.departureDate!=='No prices in range'&&!isNaN(+r.price))
+        .map(r=>({partner:r.partner||'',from:r.from||'',to:r.to||'',dep:r.departureDate,ret:r.returnDate||'',days:parseInt(r.tripDays)||0,price:Math.round(+r.price),lowest:r.isLowest==='Yes',link:r.partner_link||'',snippet:r.html_snippet||''}));
+    } else {
+      const parsePrice=s=>parseFloat((s||'').replace(/[^\d.,]/g,'').replace(',','.'))|| 0;
+      hLoadedMarkets[mkt]=rows
+        .filter(r=>r.checkIn&&r.hasPrice==='TRUE'&&parsePrice(r.google_price_per_night)>0)
+        .map(r=>({name:r.trivagoHotelId||r.googlePropertyToken||'Unknown',dep:r.checkIn,ret:r.checkOut||'',days:parseInt(r.nights)||0,price:Math.round(parsePrice(r.google_price_per_night)),total:Math.round(parsePrice(r.google_total_price)),link:r.deepLink||'',snippet:r.deepLink?`<a href="${r.deepLink}" target="_blank" data-track-source="hotel_${mkt.toLowerCase()}">${r.trivagoHotelId||'Hotel'} ${r.checkIn} – ${r.checkOut}</a>`:''}));
+    }
+  }catch(e){/* silent fail */}
+}
+</script>
+</body>
+</html>
